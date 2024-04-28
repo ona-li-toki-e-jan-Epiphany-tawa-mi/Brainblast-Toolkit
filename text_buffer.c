@@ -41,7 +41,7 @@ uint  history_stack_index = 0;
  */
 void increment_stack_index() {
     ++history_stack_index;
-    if (history_stack_index > HISTORY_STACK_SIZE)
+    if (history_stack_index >= HISTORY_STACK_SIZE)
         history_stack_index = 0;
 }
 
@@ -83,9 +83,17 @@ void save_buffer() {
     } while (NULL != character);
 }
 
+/**
+ * Recalls the previous input if foward_recall is false, else recalls the next
+ * input from the history buffer.
+ *
+ * @param current_buffer (global) - the null-terminated buffer to write to.
+ * @param buffer_cursor (global) - the user's cursor inside the buffer.
+ * @param input_size (global) - The amount of space used inside the buffer.
+ */
 void recall_buffer(const bool forward_recall) {
     uchar character;
-    uint  final_history_index;
+    uint  final_history_index = history_stack_index;
 
     // Moves forwards or backwards to the next block in the history stack.
     if (forward_recall) {
@@ -101,6 +109,12 @@ void recall_buffer(const bool forward_recall) {
         increment_stack_index();
     }
 
+    // If a NULL is found at the next block, that means that it's at the end of
+    // the history buffer.
+    if (NULL == history_stack[history_stack_index]) {
+        history_stack_index = final_history_index;
+        return;
+    }
     // Preservers the index of this block as we will stay here in case of
     // succesive movements through the history.
     final_history_index = history_stack_index;
@@ -115,14 +129,17 @@ void recall_buffer(const bool forward_recall) {
     }
 
     // Reads from history buffer into buffer.
-    do {
+    while (true) {
         character                     = history_stack[history_stack_index];
         current_buffer[buffer_cursor] = character;
         (void)putchar(character);
 
+        if (NULL == character)
+            break;
+
         increment_stack_index();
         ++buffer_cursor;
-    } while (NULL != character);
+    }
     input_size = buffer_cursor;
 
     // Restores history stack index to the start of the current block so that
@@ -132,7 +149,6 @@ void recall_buffer(const bool forward_recall) {
 
 
 
-// TODO add history.
 /**
  * Defined in header file.
  */
