@@ -45,33 +45,37 @@
 # pet
 # plus4
 
+# Target platform to compile for.
 TARGET ?= c64
+
+# Size of stack used to recall previous inputs.
+HISTORY_STACK_SIZE ?= 2048U
 
 # TODO fine tune how many cells each version gets.
 ifeq (${TARGET}, c16)
-	CELL_COUNT ?= 15000U
+	BASICFUCK_MEMORY_SIZE ?= 15000U
 else ifeq (${TARGET}, plus4)
-	CELL_COUNT ?= 15000U
+	BASICFUCK_MEMORY_SIZE ?= 15000U
 else ifeq (${TARGET}, c64)
-	CELL_COUNT ?= 15000U
+	BASICFUCK_MEMORY_SIZE ?= 15000U
 else ifeq (${TARGET}, c128)
-	CELL_COUNT ?= 15000U
+	BASICFUCK_MEMORY_SIZE ?= 15000U
 else ifeq (${TARGET}, vic20)
-	CELL_COUNT ?= 15000U
+	BASICFUCK_MEMORY_SIZE ?= 15000U
 else ifeq (${TARGET}, pet)
-	CELL_COUNT ?= 15000U
+	BASICFUCK_MEMORY_SIZE ?= 15000U
 else ifeq (${TARGET}, cbm510)
-	CELL_COUNT ?= 15000U
+	BASICFUCK_MEMORY_SIZE ?= 15000U
 else ifeq (${TARGET}, cbm610)
-	CELL_COUNT ?= 15000U
+	BASICFUCK_MEMORY_SIZE ?= 15000U
 else
-	CELL_COUNT ?= 15000U
+	BASICFUCK_MEMORY_SIZE ?= 15000U
 endif
 
 
 
 CC65_DIRECTORY := /usr/share/cc65
-CL65_ARGUMENTS := --include-dir ${CC65_DIRECTORY}/include --asm-include-dir ${CC65_DIRECTORY}/asminc --lib-path ${CC65_DIRECTORY}/lib --cfg-path ${CC65_DIRECTORY}/cfg --target ${TARGET} -D BASICFUCK_MEMORY_SIZE=${CELL_COUNT} -Osir --static-locals
+CL65_ARGUMENTS := --include-dir ${CC65_DIRECTORY}/include --asm-include-dir ${CC65_DIRECTORY}/asminc --lib-path ${CC65_DIRECTORY}/lib --cfg-path ${CC65_DIRECTORY}/cfg --target ${TARGET} -D BASICFUCK_MEMORY_SIZE=${BASICFUCK_MEMORY_SIZE} -D HISTORY_STACK_SIZE=${HISTORY_STACK_SIZE} -Osir --static-locals
 
 SOURCES := bytecode_compiler.c opcodes.c text_buffer.c screen.c
 
@@ -86,7 +90,7 @@ all: ${PROGRAMS:.c=.prg}
 	cl65 ${CL65_ARGUMENTS} -o $@ $^
 
 ifneq (${MAKECMDGOALS},clean)
--include ${REPL_SOURCE:.c=.d} ${SOURCES:.c=.d}
+-include ${PROGRAMS:.c=.d} ${SOURCES:.c=.d}
 endif
 
 %.o: %.c

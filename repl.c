@@ -52,32 +52,32 @@ uchar* computer_memory_pointer;                   // the current index into raw 
 
 
 // Global variables for exchaning values with inline assembler. TODO
-//uchar RegisterA, RegisterX, RegisterY;
-//uint  JumpAddress;
+//uchar register_a, register_x, register_y;
+//uint  jump_address;
 
 // TODO make sure this actually works. (jsr may be jumping to variable location rather than value.)
+// This might be able to be done with an assembly file.
+
 /**
  * Runs the BASICfuck execute instruction. TODO
  */
 void execute() {
-    /*
-    RegisterA   = BASICfuck_memory[BASICfuck_memory_index];
-    RegisterX   = BASICfuck_memory[BASICfuck_memory_index+1];
-    RegisterY   = BASICfuck_memory[BASICfuck_memory_index+2];
-    JumpAddress = (uint)computer_memory_pointer;
-
-    __asm__ volatile ("lda     %v", RegisterA);
-    __asm__ volatile ("ldx     %v", RegisterX);
-    __asm__ volatile ("ldy     %v", RegisterY);
-    __asm__ volatile ("jsr     %v", JumpAddress);
-    __asm__ volatile ("sta     %v", RegisterA);
-    __asm__ volatile ("stx     %v", RegisterX);
-    __asm__ volatile ("sty     %v", RegisterY);
-
-    BASICfuck_memory[BASICfuck_memory_index]   = RegisterA;
-    BASICfuck_memory[BASICfuck_memory_index+1] = RegisterX;
-    BASICfuck_memory[BASICfuck_memory_index+2] = RegisterY;
-    */
+//    register_a   = BASICfuck_memory[BASICfuck_memory_index];
+//    register_x   = BASICfuck_memory[BASICfuck_memory_index+1];
+//    register_y   = BASICfuck_memory[BASICfuck_memory_index+2];
+//    jump_address = (uint)computer_memory_pointer;
+//
+//    __asm__ volatile ("lda     %v", register_a);
+//    __asm__ volatile ("ldx     %v", register_x);
+//    __asm__ volatile ("ldy     %v", register_y);
+//    __asm__ volatile ("jsr     %v", jump_address);
+//    __asm__ volatile ("sta     %v", register_a);
+//    __asm__ volatile ("stx     %v", register_x);
+//    __asm__ volatile ("sty     %v", register_y);
+//
+    //BASICfuck_memory[BASICfuck_memory_index]   = register_a;
+    //BASICfuck_memory[BASICfuck_memory_index+1] = register_x;
+    //BASICfuck_memory[BASICfuck_memory_index+2] = register_y;
 }
 
 /**
@@ -266,7 +266,6 @@ void help_menu(void) {
     clrscr();
 }
 
-// TODO switch to using ctrl key for slow down.
 /**
  * Displays a readout of the bytecode of the last program to the user. Holding
  * space will slow down the printing.
@@ -309,7 +308,6 @@ void display_bytecode() {
 
 uchar input_buffer[INPUT_BUFFER_SIZE];
 
-// TODO change readout of values to have leading 0s for the cell index.
 int main(void) {
     // Used to avoid calling the bloated printf.
     uchar number_to_string_buffer[6];

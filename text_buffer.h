@@ -17,6 +17,9 @@
 
 /*
  * Interactive text buffers.
+ *
+ * Requires HISTORY_STACK_SIZE to be defined to be the size of the history stack
+ * buffer.
  */
 
 #ifndef _TEXT_BUFFER_H

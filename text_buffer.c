@@ -29,51 +29,105 @@
 #include "keyboard.h"
 #include "screen.h"
 
-
-
-// The size of the history stack in bytes.
-#define HISTORY_STACK_SIZE 2048
-
 /**
  * A stack to store previous inputs so they can be recalled.
  */
 uchar history_stack[HISTORY_STACK_SIZE];
+uint  history_stack_index = 0;
 
 /**
- * The next writable index into the history stack.
+ * Increments the history stack index and loops it around if it goes out of
+ * bounds.
  */
-uint history_stack_index = 0;
+void increment_stack_index() {
+    ++history_stack_index;
+    if (history_stack_index > HISTORY_STACK_SIZE)
+        history_stack_index = 0;
+}
+
+/**
+ * Decrements the history stack index and loops it around if it goes out of
+ * bounds.
+ */
+void decrement_stack_index() {
+    if (0 == history_stack_index) {
+        history_stack_index = HISTORY_STACK_SIZE - 1;
+    } else {
+        --history_stack_index;
+    }
+}
+
+
+
+// Global variables for passing parameters between functions.
+uchar* current_buffer;                            // The buffer currently being edited.
+uchar  buffer_cursor;                             // The location of the user's cursor inside the buffer.
+uchar  input_size;                                // How much of the buffer is taken up by the text typed by the user.
 
 /**
  * Saves the given null-terminated text buffer to the history stack for later
  * recollection.
  *
- * @param buffer - the null-terminated buffer to save.
+ * @param current_buffer (global) - the null-terminated buffer to save.
  */
-void save_buffer(const uchar *const buffer) {
+void save_buffer() {
     uchar character;
     uchar buffer_index = 0;
 
-    while (true) {
-        character = buffer[buffer_index];
-
+    do {
+        character = current_buffer[buffer_index];
         history_stack[history_stack_index] = character;
-        history_stack_index++;
-        if (history_stack_index > HISTORY_STACK_SIZE)
-            history_stack_index = 0;
 
-        if (character == NULL)
-            break;
-        buffer_index++;
-    }
+        increment_stack_index();
+        ++buffer_index;
+    } while (NULL != character);
 }
 
-void recall_buffer(uchar *const buffer) {
-    //uint history_seek_index = history_stack - 1;
+void recall_buffer(const bool forward_recall) {
+    uchar character;
+    uint  final_history_index;
 
-    //while (true) {
-    //    if (history_seek_index > 0
-    //}
+    // Moves forwards or backwards to the next block in the history stack.
+    if (forward_recall) {
+        while (NULL != history_stack[history_stack_index])
+            increment_stack_index();
+        increment_stack_index();
+
+    } else {
+        decrement_stack_index();
+        do {
+            decrement_stack_index();
+        } while (NULL != history_stack[history_stack_index]);
+        increment_stack_index();
+    }
+
+    // Preservers the index of this block as we will stay here in case of
+    // succesive movements through the history.
+    final_history_index = history_stack_index;
+
+    // Navigates visual cursor to the end of the buffer.
+    for (; buffer_cursor < input_size; ++buffer_cursor)
+        (void)putchar(KEYBOARD_RIGHT);
+    // Clears visual buffer.
+    while (buffer_cursor > 0) {
+        (void)putchar(KEYBOARD_BACKSPACE);
+        --buffer_cursor;
+    }
+
+    // Reads from history buffer into buffer.
+    do {
+        character                     = history_stack[history_stack_index];
+        current_buffer[buffer_cursor] = character;
+        (void)putchar(character);
+
+        increment_stack_index();
+        ++buffer_cursor;
+    } while (NULL != character);
+    input_size = buffer_cursor;
+
+    // Restores history stack index to the start of the current block so that
+    // moving forwards and backwords works properly.
+    history_stack_index = final_history_index;
 }
 
 
@@ -86,12 +140,13 @@ void edit_buffer(uchar *const buffer, uchar buffer_max_index) {
     uchar new_cursor;
     uchar key;
 
-    // The position of the user inside the buffer.
-    uchar cursor = 0;
-    // How much of the buffer is taken up by the text typed by the user.
-    uchar input_size = 0;
     // Ensures the last byte is reserved for a null-terminator.
     buffer_max_index -= 1;
+
+    // Loads parameters into global variables for this and other functions.
+    current_buffer = buffer;
+    buffer_cursor  = 0;
+    input_size     = 0;
 
 
     while (true) {
@@ -100,8 +155,8 @@ void edit_buffer(uchar *const buffer, uchar buffer_max_index) {
         switch (key) {
         // Finalizes the buffer and exits from this function.
         case KEYBOARD_ENTER:
-            buffer[input_size] = NULL;            // write out null-terminator.
-            for (; cursor < input_size; cursor++) // navigate to then end of buffer if neccesary.
+            current_buffer[input_size] = NULL;                  // write out null-terminator.
+            for (; buffer_cursor < input_size; ++buffer_cursor) // navigate to then end of buffer if neccesary.
                 (void)putchar(KEYBOARD_RIGHT);
             (void)putchar('\n');
 
@@ -109,15 +164,15 @@ void edit_buffer(uchar *const buffer, uchar buffer_max_index) {
 
         // "Clears" the input buffer and exits from this function.
         case KEYBOARD_STOP:
-            buffer[0] = NULL;                     // write null terminator to start of buffer, "clearing" it.
+            current_buffer[0] = NULL;             // write null terminator to start of buffer, "clearing" it.
             (void)putchar('\n');
 
             goto lquit_editing_buffer;
 
         // Clears the screen and input buffer.
         case KEYBOARD_CLEAR:
-            cursor     = 0;
-            input_size = 0;
+            buffer_cursor = 0;
+            input_size    = 0;
             clrscr();
             break;
 
@@ -129,23 +184,23 @@ void edit_buffer(uchar *const buffer, uchar buffer_max_index) {
             (void)putchar(KEYBOARD_BACKSPACE);    // display backspace.
             // Shifts characters in buffer to the left, overwiting the deleted
             // character.
-            (void)memmove(buffer+cursor - 1, buffer+cursor, input_size - cursor);
+            (void)memmove(current_buffer+buffer_cursor - 1, current_buffer+buffer_cursor, input_size - buffer_cursor);
             --input_size;
-            --cursor;
+            --buffer_cursor;
 
             break;
 
         // Handles arrow keys, moving through the buffer.
         case KEYBOARD_LEFT:
-            if (cursor > 0) {
-                --cursor;
+            if (buffer_cursor > 0) {
+                --buffer_cursor;
                 (void)putchar(KEYBOARD_LEFT);
             }
             break;
 
         case KEYBOARD_RIGHT:
-            if (cursor < input_size) {
-                ++cursor;
+            if (buffer_cursor < input_size) {
+                ++buffer_cursor;
                 (void)putchar(KEYBOARD_RIGHT);
             }
             break;
@@ -153,8 +208,8 @@ void edit_buffer(uchar *const buffer, uchar buffer_max_index) {
         case KEYBOARD_UP:
             // Navigates to the next line up, or to the start of the buffer, if
             // there is no line there.
-            new_cursor = cursor > screen_width ? cursor - screen_width : 0;
-            for (; cursor > new_cursor; --cursor)
+            new_cursor = buffer_cursor > screen_width ? buffer_cursor - screen_width : 0;
+            for (; buffer_cursor > new_cursor; --buffer_cursor)
                 (void)putchar(KEYBOARD_LEFT);
 
             break;
@@ -162,53 +217,57 @@ void edit_buffer(uchar *const buffer, uchar buffer_max_index) {
         case KEYBOARD_DOWN:
             // Navigates to the next line down, or to the end of the filled
             // buffer, if there is no line there.
-            new_cursor = (input_size - cursor) > screen_width ? cursor + screen_width : input_size;
-            for (; cursor < new_cursor; ++cursor)
+            new_cursor = (input_size - buffer_cursor) > screen_width ? buffer_cursor + screen_width : input_size;
+            for (; buffer_cursor < new_cursor; ++buffer_cursor)
                 (void)putchar(KEYBOARD_RIGHT);
 
             break;
 
         // Handles HOME, moving to the start of the buffer.
         case KEYBOARD_HOME:
-            for (; cursor > 0; --cursor)
+            for (; buffer_cursor > 0; --buffer_cursor)
                 (void)putchar(KEYBOARD_LEFT);
             break;
 
         // Handles INST, inserting characters into the buffer.
         case KEYBOARD_INSERT:
-            if (input_size > buffer_max_index || cursor == input_size)
+            if (input_size > buffer_max_index || buffer_cursor == input_size)
                 break;
 
             (void)putchar(KEYBOARD_INSERT);       // display insertion.
             // Shifts characters in buffer to the right, making space for the
             // new one.
-            (void)memmove(buffer+cursor + 1, buffer+cursor, input_size - cursor);
+            (void)memmove(current_buffer+buffer_cursor + 1, current_buffer+buffer_cursor, input_size - buffer_cursor);
             input_size++;
-            buffer[cursor] = ' ';
+            current_buffer[buffer_cursor] = ' ';
 
             break;
 
         // Handles function keys, navigating through the history buffer.
         case KEYBOARD_F1:
-            for (; cursor > 0; --cursor)
-                (void)putchar(KEYBOARD_BACKSPACE);
+            recall_buffer(false);
+            break;
+
+        case KEYBOARD_F2:
+            recall_buffer(true);
+            break;
 
         // Handles typing characters.
         default:
             if ((key & 0x7F) < 0x20)              // filter out unhandled control characters.
                 break;
-            if (cursor > buffer_max_index)
+            if (buffer_cursor > buffer_max_index)
                 break;
 
-            if (cursor == input_size)             // increase buffer size if adding characters to the end.
+            if (buffer_cursor == input_size)      // increase buffer size if adding characters to the end.
                 ++input_size;
-            buffer[cursor] = key;
-            ++cursor;
+            current_buffer[buffer_cursor] = key;
+            ++buffer_cursor;
             (void)putchar(key);
         }
     }
  lquit_editing_buffer:
 
-    save_buffer(buffer);
+    save_buffer();
     return;
 }
