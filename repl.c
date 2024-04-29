@@ -38,16 +38,14 @@
 
 
 
-
-// The size of the memory for the compiled bytecode of entered BASICfuck code.
-#define PROGRAM_MEMORY_SIZE 256U
 // Memory for the compiled bytecode of entered BASICfuck code.
+#define PROGRAM_MEMORY_SIZE 256U
 Opcode program_memory[PROGRAM_MEMORY_SIZE];
 
-// Global variables for sharing information with the interpreter.
-uchar* BASICfuck_memory;                          // BASICfuck cell memory.
-uint   BASICfuck_memory_index;                    // the current index into cell memory.
-uchar* computer_memory_pointer;                   // the current index into raw computer memory.
+// Interpreter state.
+uchar  BASICfuck_memory[BASICFUCK_MEMORY_SIZE];   // BASICfuck cell memory.
+uint   BASICfuck_memory_index  = 0;               // the current index into cell memory.
+uchar* computer_memory_pointer = 0;               // the current index into raw computer memory.
 
 
 
@@ -306,30 +304,16 @@ void display_bytecode() {
 
 #define INPUT_BUFFER_SIZE 256U
 
-uchar input_buffer[INPUT_BUFFER_SIZE];
-
 int main(void) {
-    // Used to avoid calling the bloated printf.
+    uchar input_buffer[INPUT_BUFFER_SIZE];
+    // Used to avoid calling the bloated printf. 6 chars because 5 digit number
+    // + null-terminator.
     uchar number_to_string_buffer[6];
 
     // Initializes global screen size variables in screen.h.
     screensize(&screen_width, &screen_height);
-
     // Initializes the opcode table in opcodes.h.
     initialize_instruction_opcode_table();
-
-    // Initializes the interpreter.
-    BASICfuck_memory        = calloc(BASICFUCK_MEMORY_SIZE, sizeof(uchar));
-    BASICfuck_memory_index  = 0;
-    computer_memory_pointer = 0;
-
-    if (BASICfuck_memory == NULL) {
-        (void)puts("?INSUFFICIENT MEMORY\n"
-                   "\n"
-                   "Press ANY KEY to EXIT");
-        (void)cgetc();
-        return 0;
-    }
 
 
     clrscr();
