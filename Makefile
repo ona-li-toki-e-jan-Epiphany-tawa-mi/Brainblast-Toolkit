@@ -15,27 +15,6 @@
 # Brainblast-Toolkit. If not, see <https://www.gnu.org/licenses/>.             #
 ################################################################################
 
-# Availible commands:
-# - make/make all
-#     Builds binaries for given TARGET.
-# - make assembly
-#     Builds assembly for given target for analysis.
-# - make runREPL
-#     Builds REPL binaries for given TARGET and runs it in an emulator.
-# - make clean
-#     Deletes build files.
-# - make cleanAll
-#     Deletes build files and built binaries.
-
-# Impossible targets:
-# gamate      - no keyboard.
-# geos-apple  - this is not an OS application.
-# geos-cbm    - this is not an OS application.
-# lynx        - no keyboard.
-# nes         - no keyboard.
-# pce         - no keyboard.
-# supervision - no keyboard.
-
 # TODO Desired additional targets:
 # apple2
 # apple2enh
@@ -51,16 +30,33 @@
 # cbm510 - doesn't display anything.
 # cbm610 - doesn't always load .prg (why?,) blinking cursor appears in wrong place.
 
-# Supported targets:
-# c64
-# c128
-# pet
-# plus4
+# Available commands:
+# - make/make all
+#     Builds binaries for given TARGET.
+# - make assembly
+#     Builds assembly for given target for analysis.
+# - make runREPL
+#     Builds REPL binaries for given TARGET and runs it in an emulator.
+# - make clean
+#     Deletes build files.
+# - make cleanAll
+#     Deletes build files and built binaries.
+#
+# make parameters (VARIABLE=VALUE on command line):
+# - TARGET
+#     Target platform to build for. Availible targets:
+#     - c64
+#     - c128
+#     - pet
+#     - plus4
+# - HISTORY_STACK_SIZE
+#     The size, in bytes, of the stack used to recall previous user inputs.
+# - BASICFUCK_MEMORY_SIZE
+#     The number of cells/bytes to allocate for BASICfuck memory.
 
-# Target platform to compile for.
-TARGET ?= c64
 
-# Size of stack used to recall previous inputs.
+
+TARGET             ?= c64
 HISTORY_STACK_SIZE ?= 2048U
 
 # TODO fine tune how many cells each version gets.
@@ -90,11 +86,12 @@ CC65_DIRECTORY := /usr/share/cc65
 CL65_ARGUMENTS := --include-dir ${CC65_DIRECTORY}/include --asm-include-dir ${CC65_DIRECTORY}/asminc --lib-path ${CC65_DIRECTORY}/lib --cfg-path ${CC65_DIRECTORY}/cfg --target ${TARGET} -D BASICFUCK_MEMORY_SIZE=${BASICFUCK_MEMORY_SIZE} -D HISTORY_STACK_SIZE=${HISTORY_STACK_SIZE} -Osir --static-locals
 
 SOURCE_DIRECTORY  := src
-OUTPUT_DIRECTORY  := out
 REPL_SOURCE_FILES := ${addprefix ${SOURCE_DIRECTORY}/,repl.c bytecode_compiler.c opcodes.c text_buffer.c screen.c}
 vpath %.c ${dir ${REPL_SOURCE_FILES}}
 REPL_OBJECT_FILES := ${notdir ${REPL_SOURCE_FILES:.c=.o}}
-REPL_BINARY       := ${OUTPUT_DIRECTORY}/${TARGET}-repl.prg
+
+OUTPUT_DIRECTORY := out
+REPL_BINARY      := ${OUTPUT_DIRECTORY}/${TARGET}-repl.prg
 
 .PHONY: all
 all: ${REPL_BINARY}
