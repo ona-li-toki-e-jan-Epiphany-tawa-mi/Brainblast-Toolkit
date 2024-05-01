@@ -50,32 +50,41 @@ uchar* computer_memory_pointer = 0;               // the current index into raw 
 
 
 // Global variables for exchaning values with inline assembler. TODO
-//uchar register_a, register_x, register_y;
-//uint  jump_address;
-
-// TODO make sure this actually works. (jsr may be jumping to variable location rather than value.)
-// This might be able to be done with an assembly file.
+uchar register_a, register_x, register_y;
 
 /**
- * Runs the BASICfuck execute instruction. TODO
+ * Runs the BASICfuck execute instruction.
  */
 void execute() {
-//    register_a   = BASICfuck_memory[BASICfuck_memory_index];
-//    register_x   = BASICfuck_memory[BASICfuck_memory_index+1];
-//    register_y   = BASICfuck_memory[BASICfuck_memory_index+2];
-//    jump_address = (uint)computer_memory_pointer;
-//
-//    __asm__ volatile ("lda     %v", register_a);
-//    __asm__ volatile ("ldx     %v", register_x);
-//    __asm__ volatile ("ldy     %v", register_y);
-//    __asm__ volatile ("jsr     %v", jump_address);
-//    __asm__ volatile ("sta     %v", register_a);
-//    __asm__ volatile ("stx     %v", register_x);
-//    __asm__ volatile ("sty     %v", register_y);
-//
-    //BASICfuck_memory[BASICfuck_memory_index]   = register_a;
-    //BASICfuck_memory[BASICfuck_memory_index+1] = register_x;
-    //BASICfuck_memory[BASICfuck_memory_index+2] = register_y;
+    register_a   = BASICfuck_memory[BASICfuck_memory_index];
+    register_x   = BASICfuck_memory[BASICfuck_memory_index+1];
+    register_y   = BASICfuck_memory[BASICfuck_memory_index+2];
+
+    // Overwrites address of subroutine to call in next assembly block with the
+    // computer memory pointer's value.
+    __asm__ volatile ("lda     %v",   computer_memory_pointer);
+    __asm__ volatile ("sta     %g+1", ljump_instruction);
+    __asm__ volatile ("lda     %v+1", computer_memory_pointer);
+    __asm__ volatile ("sta     %g+2", ljump_instruction);
+    // Executes subroutine.
+    __asm__ volatile ("lda     %v",   register_a);
+    __asm__ volatile ("ldx     %v",   register_x);
+    __asm__ volatile ("ldy     %v",   register_y);
+ ljump_instruction:
+    __asm__ volatile ("jsr     %w",   NULL);
+    // Retrieves resuting values.
+    __asm__ volatile ("sta     %v",   register_a);
+    __asm__ volatile ("stx     %v",   register_x);
+    __asm__ volatile ("sty     %v",   register_y);
+
+    BASICfuck_memory[BASICfuck_memory_index]   = register_a;
+    BASICfuck_memory[BASICfuck_memory_index+1] = register_x;
+    BASICfuck_memory[BASICfuck_memory_index+2] = register_y;
+
+    return;
+    // If we don't include a jmp instruction, cc65, annoyingly, strips it from
+    // the resulting assembly.
+    __asm__ volatile ("jmp     %g", ljump_instruction);
 }
 
 /**
@@ -256,7 +265,7 @@ void help_menu(void) {
                "( - Move to previous location in computer memory.\n"
                "@ - Read value from computer memory into cell.\n"
                "* - Write value from cell into computer memory\n"
-               "% - Execute location in computer memory as subroutine (currently disabled.) The values of the current and next two cells will be used for the A, X, and Y registers. Resulting register values will be stored back into the respective cells.\n"
+               "% - Execute location in computer memory as subroutine. The values of the current and next two cells will be used for the A, X, and Y registers. Resulting register values will be stored back into the respective cells.\n"
                "\n"
                "Press ANY KEY to CONTINUE");
     (void)cgetc();
