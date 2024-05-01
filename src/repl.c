@@ -49,7 +49,7 @@ uchar* computer_memory_pointer = 0;               // the current index into raw 
 
 
 
-// Global variables for exchaning values with inline assembler. TODO
+// Global variables for exchaning values with inline assembler.
 uchar register_a, register_x, register_y;
 
 /**
