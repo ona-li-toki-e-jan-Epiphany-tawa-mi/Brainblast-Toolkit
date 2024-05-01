@@ -91,7 +91,8 @@ void save_buffer() {
  *
  * @param current_buffer (global) - the null-terminated buffer to write to.
  * @param buffer_cursor (global) - the user's cursor inside the buffer.
- * @param input_size (global) - The amount of space used inside the buffer.
+ * @param input_size (global) - the amount of space used inside the buffer.
+ * @param forward_recall - which direction to move in in the history buffer.
  */
 void recall_buffer(const bool forward_recall) {
     uchar character;

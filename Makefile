@@ -110,9 +110,9 @@ endif
 
 
 .PHONY: assembly
-assembly: ${REPL_OBJECT_FILES:.o=.o.s}
+assembly: ${REPL_OBJECT_FILES:.o=.s}
 
-%.o.s: %.c
+%.s: %.c
 	cl65 ${CL65_ARGUMENTS} -S -o $@ $<
 
 
@@ -143,7 +143,7 @@ endif
 
 .PHONY: clean
 clean:
-	-rm *.o *.o.s *.d
+	-rm *.o *.s *.d
 
 .PHONY: cleanAll
 cleanAll: clean

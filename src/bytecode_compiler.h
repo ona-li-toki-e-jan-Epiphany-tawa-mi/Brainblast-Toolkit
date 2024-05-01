@@ -27,9 +27,9 @@
 
 
 typedef uchar ByteCodeCompileResult;
-#define BCCOMPILE_SUCCESS           0
-#define BCCOMPILE_OUT_OF_MEMORY     1
-#define BCCOMPILE_UNTERMINATED_LOOP 2
+#define BCCOMPILE_SUCCESS           0U
+#define BCCOMPILE_OUT_OF_MEMORY     1U
+#define BCCOMPILE_UNTERMINATED_LOOP 2U
 
 /**
  * Bytecode compiles BASICfuck code.
