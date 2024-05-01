@@ -13,7 +13,19 @@
 #                                                                              #
 # You should have received a copy of the GNU General Public License along with #
 # Brainblast-Toolkit. If not, see <https://www.gnu.org/licenses/>.             #
-################################################################################x
+################################################################################
+
+# Availible commands:
+# - make/make all
+#     Builds binaries for given TARGET.
+# - make assembly
+#     Builds assembly for given target for analysis.
+# - make runREPL
+#     Builds REPL binaries for given TARGET and runs it in an emulator.
+# - make clean
+#     Deletes build files.
+# - make cleanAll
+#     Deletes build files and built binaries.
 
 # Impossible targets:
 # gamate      - no keyboard.
@@ -77,39 +89,39 @@ endif
 CC65_DIRECTORY := /usr/share/cc65
 CL65_ARGUMENTS := --include-dir ${CC65_DIRECTORY}/include --asm-include-dir ${CC65_DIRECTORY}/asminc --lib-path ${CC65_DIRECTORY}/lib --cfg-path ${CC65_DIRECTORY}/cfg --target ${TARGET} -D BASICFUCK_MEMORY_SIZE=${BASICFUCK_MEMORY_SIZE} -D HISTORY_STACK_SIZE=${HISTORY_STACK_SIZE} -Osir --static-locals
 
-SOURCES := bytecode_compiler.c opcodes.c text_buffer.c screen.c
-
-REPL     := repl.c
-PROGRAMS := ${REPL}
-
+SOURCE_DIRECTORY  := src
+OUTPUT_DIRECTORY  := out
+REPL_SOURCE_FILES := ${addprefix ${SOURCE_DIRECTORY}/,repl.c bytecode_compiler.c opcodes.c text_buffer.c screen.c}
+vpath %.c ${dir ${REPL_SOURCE_FILES}}
+REPL_OBJECT_FILES := ${notdir ${REPL_SOURCE_FILES:.c=.o}}
+REPL_BINARY       := ${OUTPUT_DIRECTORY}/${TARGET}-repl.prg
 
 .PHONY: all
-all: ${PROGRAMS:.c=.prg}
+all: ${REPL_BINARY}
 
-%.prg: %.o ${SOURCES:.c=.o}
+${REPL_BINARY}: ${REPL_OBJECT_FILES}
+	mkdir -p ${OUTPUT_DIRECTORY}
 	cl65 ${CL65_ARGUMENTS} -o $@ $^
 
-ifneq (${MAKECMDGOALS},clean)
--include ${PROGRAMS:.c=.d} ${SOURCES:.c=.d}
+%.o: %.c
+	cl65 ${CL65_ARGUMENTS} --create-dep ${@:.o=.d} -c -o $@ $<
+# Includes dependency files created from building object files.
+ifneq (${MAKECMDGOALS},clean cleanAll)
+-include ${REPL_OBJECT_FILES:.o=.d}
 endif
 
-%.o: %.c
-	cl65 ${CL65_ARGUMENTS} --create-dep ${<:.c=.d} -c -o $@ $<
 
 
-
-# Generates assembly files of C code for analysis.
 .PHONY: assembly
-assembly: ${PROGRAMS:.c=.o.s} ${SOURCES:.c=.o.s}
+assembly: ${REPL_OBJECT_FILES:.o=.o.s}
 
 %.o.s: %.c
 	cl65 ${CL65_ARGUMENTS} -S -o $@ $<
 
 
 
-# Runs the REPL inside an emulator for the given target.
 .PHONY: runREPL
-runREPL: ${REPL:.c=.prg}
+runREPL: ${REPL_BINARY}
 ifeq (${TARGET}, c16)
 	xplus4 -model c16 -silent $< # VICE.
 else ifeq (${TARGET}, plus4)
@@ -134,4 +146,8 @@ endif
 
 .PHONY: clean
 clean:
-	-rm *.prg *.o *.o.s *.d
+	-rm *.o *.o.s *.d
+
+.PHONY: cleanAll
+cleanAll: clean
+	-rm -r ${OUTPUT_DIRECTORY}
