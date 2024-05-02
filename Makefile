@@ -42,7 +42,8 @@
 #     - c128  (Commodore 128,    emulator: VICE)
 #     - pet   (Commodore PET,    emulator: VICE)
 #     - plus4 (Commodore Plus/4, emulator: VICE)
-#     - cx16  (Commander X16,    emulator: x16-emulator)
+#     - cx16  (Commander X16,    emulator: x16-emulator) (NOTE: the ','
+#       instruction does not currently work.)
 # - HISTORY_STACK_SIZE
 #     The size, in bytes, of the stack used to recall previous user inputs.
 # - BASICFUCK_MEMORY_SIZE
@@ -60,11 +61,11 @@ BASICFUCK_MEMORY_SIZE ?= 30000U
 else ifeq (${TARGET}, c64)
 BASICFUCK_MEMORY_SIZE ?= 30000U
 else ifeq (${TARGET}, c128)
-BASICFUCK_MEMORY_SIZE ?= 27500U
+BASICFUCK_MEMORY_SIZE ?= 28500U
 else ifeq (${TARGET}, pet)
-BASICFUCK_MEMORY_SIZE ?= 17000U
+BASICFUCK_MEMORY_SIZE ?= 18000U
 else ifeq (${TARGET}, cx16)
-BASICFUCK_MEMORY_SIZE ?= 24500U
+BASICFUCK_MEMORY_SIZE ?= 25500U
 else
 ${error BASICfuck memory size not set for build target ${TARGET}}
 endif
