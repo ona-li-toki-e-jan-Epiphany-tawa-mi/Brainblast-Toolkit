@@ -23,19 +23,17 @@
  */
 
 #include <conio.h>
-#include <stdlib.h>
-#include <stdio.h>
 #include <stdbool.h>
 #include <limits.h>
 #include <unistd.h>
 #include <assert.h>
-#include <string.h>
 
 #include "text_buffer.h"
 #include "bytecode_compiler.h"
 #include "opcodes.h"
 #include "keyboard.h"
 #include "screen.h"
+#include "utils.h"
 
 
 
@@ -47,8 +45,6 @@ Opcode program_memory[PROGRAM_MEMORY_SIZE];
 uchar  BASICfuck_memory[BASICFUCK_MEMORY_SIZE];   // BASICfuck cell memory.
 uint   BASICfuck_memory_index  = 0;               // the current index into cell memory.
 uchar* computer_memory_pointer = 0;               // the current index into raw computer memory.
-
-
 
 // Global variables for exchaning values with inline assembler.
 uchar register_a, register_x, register_y;
@@ -305,12 +301,12 @@ void display_bytecode() {
 
             // Prints addresses.
             (void)fputs("\n$", stdout);
-            cputhex16((uint)i);
+            utoa_fputs(4, i, 16);
             (void)putchar(':');
         }
         // Prints values.
         (void)putchar(' ');
-        cputhex8(program_memory[i]);
+        utoa_fputs(2, program_memory[i], 16);
 
         if (i >= PROGRAM_MEMORY_SIZE - 1)
             break;
@@ -326,11 +322,6 @@ void display_bytecode() {
 
 int main(void) {
     uchar input_buffer[INPUT_BUFFER_SIZE];
-    // Used to avoid calling the bloated printf. 6 chars because 5 digit number
-    // + null-terminator.
-    uchar number_to_string_buffer[6];
-    // The number of zeros to put before the cell number.
-    size_t leading_zero_count;
 
     // Initializes global screen size variables in screen.h.
     screensize(&screen_width, &screen_height);
@@ -340,8 +331,7 @@ int main(void) {
 
     clrscr();
     (void)puts("Brainblast-Toolkit BASICfuck REPL 0.1.0\n");
-    (void)fputs( utoa(BASICFUCK_MEMORY_SIZE, number_to_string_buffer, 10)
-               , stdout);
+    utoa_fputs(0, BASICFUCK_MEMORY_SIZE, 10);
     (void)puts(" CELLS FREE\n"
                "\n"
                "Enter '?' for HELP\n"
@@ -381,16 +371,12 @@ int main(void) {
 
         run_interpreter();
 
-        // Print.
-        (void)fputs( utoa(BASICfuck_memory[BASICfuck_memory_index], number_to_string_buffer, 10)
-                   , stdout);
+        // Prints cell value.
+        utoa_fputs(3, BASICfuck_memory[BASICfuck_memory_index], 10);
         (void)fputs(" (Cell ", stdout);
-        leading_zero_count = 5 - strlen(utoa(BASICfuck_memory_index, number_to_string_buffer, 10));
-        for (; leading_zero_count > 0; --leading_zero_count)
-            (void)fputs("0", stdout);
-        (void)fputs(number_to_string_buffer, stdout);
+        utoa_fputs(5, BASICfuck_memory_index, 10);
         (void)fputs(", Memory $", stdout);
-        cputhex16((uint)computer_memory_pointer);
+        utoa_fputs(4, (uint)computer_memory_pointer, 16);
         (void)puts(")");
     }
  lexit_repl:
