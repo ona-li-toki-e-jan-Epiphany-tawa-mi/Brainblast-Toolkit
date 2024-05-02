@@ -24,12 +24,6 @@
 # cx16
 # telestrat
 
-# TODO Currently working on:
-# c16    - memory issue.
-# vic20  - code size issue.
-# cbm510 - doesn't display anything.
-# cbm610 - doesn't always load .prg (why?,) blinking cursor appears in wrong place.
-
 # Available commands:
 # - make/make all
 #     Builds binaries for given TARGET.
@@ -59,23 +53,16 @@
 TARGET             ?= c64
 HISTORY_STACK_SIZE ?= 2048U
 
-# TODO fine tune how many cells each version gets.
-ifeq (${TARGET}, c16)
-	BASICFUCK_MEMORY_SIZE ?= 15000U
-else ifeq (${TARGET}, plus4)
-	BASICFUCK_MEMORY_SIZE ?= 15000U
+# 30,000 Cells max. If someone wants more they can specify it on the command
+# line.
+ifeq (${TARGET}, plus4)
+	BASICFUCK_MEMORY_SIZE ?= 30000U
 else ifeq (${TARGET}, c64)
-	BASICFUCK_MEMORY_SIZE ?= 15000U
+	BASICFUCK_MEMORY_SIZE ?= 30000U
 else ifeq (${TARGET}, c128)
-	BASICFUCK_MEMORY_SIZE ?= 15000U
-else ifeq (${TARGET}, vic20)
-	BASICFUCK_MEMORY_SIZE ?= 15000U
+	BASICFUCK_MEMORY_SIZE ?= 27500U
 else ifeq (${TARGET}, pet)
-	BASICFUCK_MEMORY_SIZE ?= 15000U
-else ifeq (${TARGET}, cbm510)
-	BASICFUCK_MEMORY_SIZE ?= 15000U
-else ifeq (${TARGET}, cbm610)
-	BASICFUCK_MEMORY_SIZE ?= 15000U
+	BASICFUCK_MEMORY_SIZE ?= 17000U
 else
 	BASICFUCK_MEMORY_SIZE ?= 15000U
 endif
@@ -119,22 +106,14 @@ assembly: ${REPL_OBJECT_FILES:.o=.s}
 
 .PHONY: runREPL
 runREPL: ${REPL_BINARY}
-ifeq (${TARGET}, c16)
-	xplus4 -model c16 -silent $< # VICE.
-else ifeq (${TARGET}, plus4)
+ifeq (${TARGET}, plus4)
 	xplus4 -silent $<            # VICE.
 else ifeq (${TARGET}, c64)
 	x64 -silent $<               # VICE.
 else ifeq (${TARGET}, c128)
 	x128 -silent $<              # VICE.
-else ifeq (${TARGET}, vic20)
-	xvic -silent $<              # VICE.
 else ifeq (${TARGET}, pet)
 	xpet -silent $<              # VICE.
-else ifeq (${TARGET}, cbm510)
-	xcbm5x0 -silent $<           # VICE.
-else ifeq (${TARGET}, cbm610)
-	xcbm2 -silent $<             # VICE.
 else
 	${error no emulator configured for REPL of build target ${TARGET}}
 endif
