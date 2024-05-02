@@ -17,7 +17,7 @@ This rewrite includes the following benefits:
 - WAYYYYY FASTER! (x2)
 - Support for a few 6502 machines, not just the Commodore 64 (see `Makefile` for supported systems.)
 
-## BASICfuck.
+## BASICfuck
 
 BASICfuck is a small extension of mine to the brainfuck language that is
 reminiscent of BASIC, and is the language this REPL uses. You can find more

@@ -52,13 +52,15 @@ uchar* computer_memory_pointer = 0;               // the current index into raw 
 uchar register_a, register_x, register_y;
 
 /**
- * Runs the BASICfuck execute instruction.
+ * Runs the execute part of the BASICfuck execute instruction.
+ *
+ * @param register_a (global) - the value to place in the A register.
+ * @param register_x (global) - the value to place in the X register.
+ * @param register_y (global) - the value to place in the Y register.
+ * @param computer_memory_pointer (global) - the address to execute as a
+ *                                           subroutine.
  */
 void execute() {
-    register_a   = BASICfuck_memory[BASICfuck_memory_index];
-    register_x   = BASICfuck_memory[BASICfuck_memory_index+1];
-    register_y   = BASICfuck_memory[BASICfuck_memory_index+2];
-
     // Overwrites address of subroutine to call in next assembly block with the
     // computer memory pointer's value.
     __asm__ volatile ("lda     %v",   computer_memory_pointer);
@@ -75,10 +77,6 @@ void execute() {
     __asm__ volatile ("sta     %v",   register_a);
     __asm__ volatile ("stx     %v",   register_x);
     __asm__ volatile ("sty     %v",   register_y);
-
-    BASICfuck_memory[BASICfuck_memory_index]   = register_a;
-    BASICfuck_memory[BASICfuck_memory_index+1] = register_x;
-    BASICfuck_memory[BASICfuck_memory_index+2] = register_y;
 
     return;
     // If we don't include a jmp instruction, cc65, annoyingly, strips it from
@@ -207,7 +205,13 @@ void run_interpreter() {
         goto lfinish_interpreter_cycle;
 
     lopcode_execute:
+        register_a = BASICfuck_memory[BASICfuck_memory_index];
+        register_x = BASICfuck_memory[BASICfuck_memory_index+1];
+        register_y = BASICfuck_memory[BASICfuck_memory_index+2];
         execute();
+        BASICfuck_memory[BASICfuck_memory_index]   = register_a;
+        BASICfuck_memory[BASICfuck_memory_index+1] = register_x;
+        BASICfuck_memory[BASICfuck_memory_index+2] = register_y;
         goto lfinish_interpreter_cycle;
 
 
