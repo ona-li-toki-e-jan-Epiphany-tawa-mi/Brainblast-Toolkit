@@ -7,5 +7,6 @@
     gnumake
 
     vice
+    x16-emulator x16-rom
   ];
 }).env

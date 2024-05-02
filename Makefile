@@ -21,8 +21,10 @@
 # atari (atarixl if not enough memory)
 # atmos
 # creativision - apparntly has keyboard.
-# cx16
 # telestrat
+
+# TODO fix hex numbers not being displayed by X16.
+# Probably the fault of the cputhex{8,16,32}() functions.
 
 # Available commands:
 # - make/make all
@@ -30,7 +32,7 @@
 # - make assembly
 #     Builds assembly for given target for analysis.
 # - make runREPL
-#     Builds REPL binaries for given TARGET and runs it in an emulator.
+#     Builds REPL binary for given TARGET and runs it in an emulator.
 # - make clean
 #     Deletes build files.
 # - make cleanAll
@@ -39,10 +41,11 @@
 # make parameters (VARIABLE=VALUE on command line):
 # - TARGET
 #     Target platform to build for. Availible targets:
-#     - c64
-#     - c128
-#     - pet
-#     - plus4
+#     - c64   (Commodore 64, emulator: VICE)
+#     - c128  (Commodore 128, emulator: VICE)
+#     - pet   (Commodore PET, emulator: VICE)
+#     - plus4 (Commodore Plus/4, emulator: VICE)
+#     - cx16  (Commander X16, emulator: x16-emulator)
 # - HISTORY_STACK_SIZE
 #     The size, in bytes, of the stack used to recall previous user inputs.
 # - BASICFUCK_MEMORY_SIZE
@@ -53,18 +56,20 @@
 TARGET             ?= c64
 HISTORY_STACK_SIZE ?= 2048U
 
-# 30,000 Cells max. If someone wants more they can specify it on the command
+# 30,000 Cells max. If someone wants more, they can specify it on the command
 # line.
 ifeq (${TARGET}, plus4)
-	BASICFUCK_MEMORY_SIZE ?= 30000U
+BASICFUCK_MEMORY_SIZE ?= 30000U
 else ifeq (${TARGET}, c64)
-	BASICFUCK_MEMORY_SIZE ?= 30000U
+BASICFUCK_MEMORY_SIZE ?= 30000U
 else ifeq (${TARGET}, c128)
-	BASICFUCK_MEMORY_SIZE ?= 27500U
+BASICFUCK_MEMORY_SIZE ?= 27500U
 else ifeq (${TARGET}, pet)
-	BASICFUCK_MEMORY_SIZE ?= 17000U
+BASICFUCK_MEMORY_SIZE ?= 17000U
+else ifeq (${TARGET}, cx16)
+BASICFUCK_MEMORY_SIZE ?= 24500U
 else
-	BASICFUCK_MEMORY_SIZE ?= 15000U
+${error BASICfuck memory size not set for build target ${TARGET}}
 endif
 
 
@@ -107,13 +112,15 @@ assembly: ${REPL_OBJECT_FILES:.o=.s}
 .PHONY: runREPL
 runREPL: ${REPL_BINARY}
 ifeq (${TARGET}, plus4)
-	xplus4 -silent $<            # VICE.
+	xplus4 -silent $<                              # VICE.
 else ifeq (${TARGET}, c64)
-	x64 -silent $<               # VICE.
+	x64 -silent $<                                 # VICE.
 else ifeq (${TARGET}, c128)
-	x128 -silent $<              # VICE.
+	x128 -silent $<                                # VICE.
 else ifeq (${TARGET}, pet)
-	xpet -silent $<              # VICE.
+	xpet -silent $<                                # VICE.
+else ifeq (${TARGET}, cx16)
+	x16emu -rom /usr/share/x16-rom/rom.bin -prg $< # x16-emulator.
 else
 	${error no emulator configured for REPL of build target ${TARGET}}
 endif

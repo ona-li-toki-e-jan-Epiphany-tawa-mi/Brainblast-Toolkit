@@ -34,7 +34,8 @@
  * - KEYBOARD_F2        - function key 2. If not present on system, this will be
  *                        mapped to something else.
  *
- * Supported build targets: c16, plus4, c64, c128, pet, cbm510, cbm610, vic20.
+ * Supported build targets: c16, plus4, c64, c128, pet, cbm510, cbm610, vic20,
+ *                          cx16.
  */
 
 #ifndef _KEYBOARD_H
@@ -57,15 +58,17 @@
 #define KEYBOARD_HOME      CH_HOME
 #define KEYBOARD_CLEAR     0x93U                  // Not defined in cbm.h, but the same for all CBM computers.
 
-#if defined( __C16__) || defined( __C64__) || defined(__C128__) || defined(__VIC20__) || defined(__CBM510__) || defined(__CBM610__)
+#if defined( __C16__) || defined( __C64__) || defined(__C128__) || defined(__VIC20__) || defined(__CBM510__) || defined(__CBM610__) || defined(__CX16__)
 #define KEYBOARD_F1 CH_F1
 #define KEYBOARD_F2 CH_F2
-#elif defined(__PET__) // __C16__ || __C64__ || __C128__ || __VIC20__ || __CBM510__ || __CBM610__
+#elif defined(__PET__) // __C16__ || __C64__ || __C128__ || __VIC20__ || __CBM510__ || __CBM610__ || __CX16__
 #define KEYBOARD_F1 0x5FU                         // Left arrow character key,
 #define KEYBOARD_F2 0x5EU                         // Up arrow character key.
 #else // __PET__
 #error build target not supported
 #endif
+
+
 
 #else // __CBM__
 #error build target not supported
