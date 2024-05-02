@@ -42,8 +42,7 @@
 #     - c128  (Commodore 128,    emulator: VICE)
 #     - pet   (Commodore PET,    emulator: VICE)
 #     - plus4 (Commodore Plus/4, emulator: VICE)
-#     - cx16  (Commander X16,    emulator: x16-emulator) (NOTE: the ','
-#       instruction does not currently work.)
+#     - cx16  (Commander X16,    emulator: x16-emulator)
 # - HISTORY_STACK_SIZE
 #     The size, in bytes, of the stack used to recall previous user inputs.
 # - BASICFUCK_MEMORY_SIZE
@@ -76,7 +75,7 @@ CC65_DIRECTORY := /usr/share/cc65
 CL65_ARGUMENTS := --include-dir ${CC65_DIRECTORY}/include --asm-include-dir ${CC65_DIRECTORY}/asminc --lib-path ${CC65_DIRECTORY}/lib --cfg-path ${CC65_DIRECTORY}/cfg --target ${TARGET} -D BASICFUCK_MEMORY_SIZE=${BASICFUCK_MEMORY_SIZE} -D HISTORY_STACK_SIZE=${HISTORY_STACK_SIZE} -Osir --static-locals
 
 SOURCE_DIRECTORY  := src
-REPL_SOURCE_FILES := ${addprefix ${SOURCE_DIRECTORY}/,repl.c bytecode_compiler.c opcodes.c text_buffer.c screen.c utils.c}
+REPL_SOURCE_FILES := ${addprefix ${SOURCE_DIRECTORY}/,repl.c bytecode_compiler.c opcodes.c text_buffer.c screen.c}
 vpath %.c ${dir ${REPL_SOURCE_FILES}}
 REPL_OBJECT_FILES := ${notdir ${REPL_SOURCE_FILES:.c=.o}}
 

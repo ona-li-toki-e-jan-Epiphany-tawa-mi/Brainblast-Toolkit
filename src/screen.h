@@ -24,6 +24,8 @@
 #ifndef _SCREEN_H
 #define _SCREEN_H
 
+#include <stdio.h>
+
 #include "types.h"
 
 
@@ -38,7 +40,15 @@ extern uchar screen_width
 
 
 /**
- * Runs cgetc() with a blinking cursor.
+ * On some machines, cgetc() doesn't block like expected, and instead returns
+ * immediately. This version adds in a check to ensure the blocking behavior.
+ *
+ * @return the value of the typed character.
+ */
+uchar wrapped_cgetc();
+
+/**
+ * Runs wrapped_cgetc() with a blinking cursor.
  *
  * To set a blinking cursor (easily,) you need to use the cursor() function from
  * conio.h, but it seems to error with "Illegal function call" or something when
@@ -47,6 +57,27 @@ extern uchar screen_width
  * @return the value of the typed character.
  */
 uchar blinking_cgetc();
+
+
+
+// Size of buffer used to convert numbers to strings.
+#define STRING_BUFFER_SIZE 6
+
+/*
+ * Uses utoa() to convert the value to a string and prints it with leading
+ * zeros (no newline.)
+ *
+ * NOTE: that the buffer used for this function has the size of
+ * STRING_BUFFER_SIZE, and does not check for overflows; be careful!
+ *
+ * @param digit_count - the number of digits to print. If the resulting number
+ *                      has less than this number of digits it will be prepended
+ *                      with zeros. A value of 0 disables this and simply prints
+ *                      the number.
+ * @param value - the value to print.
+ * @param radix - the base to use to generate the number string.
+ */
+void utoa_fputs(const size_t digit_count, const uint value, const uchar radix);
 
 
 

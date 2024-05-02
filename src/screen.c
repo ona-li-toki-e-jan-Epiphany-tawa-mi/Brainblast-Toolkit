@@ -24,8 +24,9 @@
 #include "screen.h"
 
 #include <stdbool.h>
-
-#include "conio.h"
+#include <stdlib.h>
+#include <string.h>
+#include <conio.h>
 
 
 
@@ -40,12 +41,46 @@ uchar screen_width  = 0
 /**
  * Defined in header file.
  */
+uchar wrapped_cgetc() {
+    uchar character = 0;
+    do {
+        character = cgetc();
+    } while (0 == character);
+
+    return character;
+}
+
+/**
+ * Defined in header file.
+ */
 uchar blinking_cgetc() {
     uchar character;
 
     cursor(true);
-    character = cgetc();
+    character = wrapped_cgetc();
     cursor(false);
 
     return character;
 }
+
+
+
+// Buffer used to convert numbers to strings.
+uchar string_buffer[STRING_BUFFER_SIZE];
+
+/*
+ * Defined in header file.
+ */
+void utoa_fputs(const size_t digit_count, const uint value, const uchar radix) {
+    size_t leading_zeros;
+
+    (void)utoa(value, string_buffer, radix);
+
+    if (0 != digit_count) {
+        leading_zeros = digit_count - strlen(string_buffer);
+        for (; leading_zeros > 0; --leading_zeros)
+            (void)fputs("0", stdout);
+    }
+
+    (void)fputs(string_buffer, stdout);
+};

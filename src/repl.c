@@ -35,7 +35,6 @@
 #include "opcodes.h"
 #include "keyboard.h"
 #include "screen.h"
-#include "utils.h"
 
 
 
@@ -161,7 +160,7 @@ void run_interpreter() {
         goto lfinish_interpreter_cycle;
 
     lopcode_input:
-        BASICfuck_memory[BASICfuck_memory_index] = cgetc();
+        BASICfuck_memory[BASICfuck_memory_index] = wrapped_cgetc();
         goto lfinish_interpreter_cycle;
 
     lopcode_jeq:
@@ -234,21 +233,6 @@ void run_interpreter() {
 #endif
 
 /**
- * Waits for the user to press a key, printing a relavent message beforehand.
- */
-void await() {
-    // cgetc() doesn't seem to block on the Commander X16 for some reason, so I
-    // just opted to wait a certain duration instead.
-#ifdef __CX16__
-    puts("CONTINUEing in 10 second(s)");
-    sleep(10);
-#else
-    puts("Press ANY KEY to CONTINUE");
-    (void)cgetc();
-#endif
-}
-
-/**
  * Runs the help menu, telling the user about the REPL and it's functions.
  */
 void help_menu() {
@@ -270,7 +254,8 @@ void help_menu() {
                "\n"
                F1_KEY_EQUIVALENT " - Abort BASICfuck program.\n"
                "\n");
-    await();
+    puts("Press ANY KEY to CONTINUE");
+    (void)wrapped_cgetc();
 
     clrscr();
     (void)puts("BASICfuck Instructions (Part 1):\n"
@@ -284,7 +269,8 @@ void help_menu() {
                "[ - Jump to corresponding ']' if value of cell is 0.\n"
                "] - Jump to corresponding '[' if value of cell is not 0.\n"
                "\n");
-    await();
+    puts("Press ANY KEY to CONTINUE");
+    (void)wrapped_cgetc();
 
     clrscr();
     (void)puts("BASICfuck Instructions (Part 2):\n"
@@ -295,7 +281,8 @@ void help_menu() {
                "* - Write value from cell into computer memory\n"
                "% - Execute location in computer memory as subroutine. The values of the current and next two cells will be used for the A, X, and Y registers. Resulting register values will be stored back into the respective cells.\n"
                "\n");
-    await();
+    puts("Press ANY KEY to CONTINUE");
+    (void)wrapped_cgetc();
 
     clrscr();
 }
