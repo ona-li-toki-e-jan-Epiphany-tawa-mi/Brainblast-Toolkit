@@ -23,8 +23,6 @@
 # creativision - apparntly has keyboard.
 # telestrat
 
-# TODO Fix help menu not working on cx16.
-
 # Available commands:
 # - make/make all
 #     Builds binaries for given TARGET.

@@ -217,6 +217,8 @@ void run_interpreter() {
 
 
 
+// Figures out if the F1 and F2 keys were remapped so that the new key is
+// displayed.
 #ifdef __PET__
 #define F1_KEY_EQUIVALENT "\x5F (left arrow character)"
 #define F2_KEY_EQUIVALENT "\x5E (up arrow character)"
@@ -226,9 +228,24 @@ void run_interpreter() {
 #endif
 
 /**
+ * Waits for the user to press a key, printing a relavent message beforehand.
+ */
+void await() {
+    // cgetc() doesn't seem to block on the Commander X16 for some reason, so I
+    // just opted to wait a certain duration instead.
+#ifdef __CX16__
+    puts("CONTINUEing in 10 second(s)");
+    sleep(10);
+#else
+    puts("Press ANY KEY to CONTINUE");
+    (void)cgetc();
+#endif
+}
+
+/**
  * Runs the help menu, telling the user about the REPL and it's functions.
  */
-void help_menu(void) {
+void help_menu() {
     clrscr();
     (void)puts("REPL Commands (must be at start of line):\n"
                "\n"
@@ -246,9 +263,8 @@ void help_menu(void) {
                F2_KEY_EQUIVALENT " - Next history item.\n"
                "\n"
                F1_KEY_EQUIVALENT " - Abort BASICfuck program.\n"
-               "\n"
-               "Press ANY KEY to CONTINUE");
-    (void)cgetc();
+               "\n");
+    await();
 
     clrscr();
     (void)puts("BASICfuck Instructions (Part 1):\n"
@@ -261,9 +277,8 @@ void help_menu(void) {
                ", - Store value of key from keyboard in cell.\n"
                "[ - Jump to corresponding ']' if value of cell is 0.\n"
                "] - Jump to corresponding '[' if value of cell is not 0.\n"
-               "\n"
-               "Press ANY KEY to CONTINUE");
-    (void)cgetc();
+               "\n");
+    await();
 
     clrscr();
     (void)puts("BASICfuck Instructions (Part 2):\n"
@@ -273,9 +288,8 @@ void help_menu(void) {
                "@ - Read value from computer memory into cell.\n"
                "* - Write value from cell into computer memory\n"
                "% - Execute location in computer memory as subroutine. The values of the current and next two cells will be used for the A, X, and Y registers. Resulting register values will be stored back into the respective cells.\n"
-               "\n"
-               "Press ANY KEY to CONTINUE");
-    (void)cgetc();
+               "\n");
+    await();
 
     clrscr();
 }
