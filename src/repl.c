@@ -29,6 +29,7 @@
 #include <limits.h>
 #include <unistd.h>
 #include <assert.h>
+#include <string.h>
 
 #include "text_buffer.h"
 #include "bytecode_compiler.h"
@@ -318,6 +319,8 @@ int main(void) {
     // Used to avoid calling the bloated printf. 6 chars because 5 digit number
     // + null-terminator.
     uchar number_to_string_buffer[6];
+    // The number of zeros to put before the cell number.
+    size_t leading_zero_count;
 
     // Initializes global screen size variables in screen.h.
     screensize(&screen_width, &screen_height);
@@ -372,8 +375,10 @@ int main(void) {
         (void)fputs( utoa(BASICfuck_memory[BASICfuck_memory_index], number_to_string_buffer, 10)
                    , stdout);
         (void)fputs(" (Cell ", stdout);
-        (void)fputs( utoa(BASICfuck_memory_index, number_to_string_buffer, 10)
-                   , stdout);
+        leading_zero_count = 5 - strlen(utoa(BASICfuck_memory_index, number_to_string_buffer, 10));
+        for (; leading_zero_count > 0; --leading_zero_count)
+            (void)fputs("0", stdout);
+        (void)fputs(number_to_string_buffer, stdout);
         (void)fputs(", Memory $", stdout);
         cputhex16((uint)computer_memory_pointer);
         (void)puts(")");
