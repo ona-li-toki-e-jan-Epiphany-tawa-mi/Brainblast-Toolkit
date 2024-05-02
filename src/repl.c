@@ -221,6 +221,14 @@ void run_interpreter() {
 
 
 
+#ifdef __PET__
+#define F1_KEY_EQUIVALENT "\x5F (left arrow character)"
+#define F2_KEY_EQUIVALENT "\x5E (up arrow character)"
+#else // __PET__
+#define F1_KEY_EQUIVALENT "F1"
+#define F2_KEY_EQUIVALENT "F2"
+#endif
+
 /**
  * Runs the help menu, telling the user about the REPL and it's functions.
  */
@@ -238,8 +246,10 @@ void help_menu(void) {
                "       Like C-c.\n"
                "HOME - Move to start of line.\n"
                "CLR - Clear screen and line.\n"
+               F1_KEY_EQUIVALENT " - Previous history item.\n"
+               F2_KEY_EQUIVALENT " - Next history item.\n"
                "\n"
-               "F1 - Abort BASICfuck program.\n"
+               F1_KEY_EQUIVALENT " - Abort BASICfuck program.\n"
                "\n"
                "Press ANY KEY to CONTINUE");
     (void)cgetc();

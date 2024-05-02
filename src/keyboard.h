@@ -61,8 +61,8 @@
 #define KEYBOARD_F1 CH_F1
 #define KEYBOARD_F2 CH_F2
 #elif defined(__PET__) // __C16__ || __C64__ || __C128__ || __VIC20__
-#define KEYBOARD_F1 95                            // Left arrow character key,
-#define KEYBOARD_F2 94                            // Up arrow character key.
+#define KEYBOARD_F1 0x5FU                         // Left arrow character key,
+#define KEYBOARD_F2 0x5EU                         // Up arrow character key.
 #else // __PET__
 #error build target not supported
 #endif
