@@ -197,7 +197,7 @@ void edit_buffer(uchar *const buffer, uchar buffer_max_index) {
 
         // Deletes characters from the buffer.
         case KEYBOARD_BACKSPACE:
-            if (cursor == 0)
+            if (buffer_cursor == 0)
                 break;
 
             (void)putchar(KEYBOARD_BACKSPACE);    // display backspace.
