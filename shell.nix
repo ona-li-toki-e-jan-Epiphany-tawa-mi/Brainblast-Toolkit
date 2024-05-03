@@ -25,5 +25,6 @@
 
     vice
     x16-emulator x16-rom
+    atari800
   ];
 }).env

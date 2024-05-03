@@ -18,7 +18,6 @@
 # TODO Desired additional targets:
 # apple2
 # apple2enh
-# atari (atarixl if not enough memory)
 # atmos
 # creativision - apparntly has keyboard.
 # telestrat
@@ -38,11 +37,13 @@
 # make parameters (VARIABLE=VALUE on command line):
 # - TARGET
 #     Target platform to build for. Availible targets:
-#     - c64   (Commodore 64,     emulator: VICE)
-#     - c128  (Commodore 128,    emulator: VICE)
-#     - pet   (Commodore PET,    emulator: VICE)
+#     - c64 (Commodore 64, emulator: VICE)
+#     - c128 (Commodore 128, emulator: VICE)
+#     - pet (Commodore PET, emulator: VICE)
 #     - plus4 (Commodore Plus/4, emulator: VICE)
-#     - cx16  (Commander X16,    emulator: x16-emulator)
+#     - cx16 (Commander X16, emulator: x16-emulator)
+#     - atari (All 8-bit Atari computers, emulator: atari800)
+#     - atarixl (8-bit Atari XL computers except for the 600XL, emulator: atari800)
 # - HISTORY_STACK_SIZE
 #     The size, in bytes, of the stack used to recall previous user inputs.
 # - BASICFUCK_MEMORY_SIZE
@@ -65,6 +66,10 @@ else ifeq (${TARGET}, pet)
 BASICFUCK_MEMORY_SIZE ?= 18000U
 else ifeq (${TARGET}, cx16)
 BASICFUCK_MEMORY_SIZE ?= 25500U
+else ifeq (${TARGET}, atari)
+BASICFUCK_MEMORY_SIZE ?= 26000U
+else ifeq (${TARGET}, atarixl)
+BASICFUCK_MEMORY_SIZE ?= 29000U
 else
 ${error BASICfuck memory size not set for build target ${TARGET}}
 endif
@@ -79,8 +84,15 @@ REPL_SOURCE_FILES := ${addprefix ${SOURCE_DIRECTORY}/,repl.c bytecode_compiler.c
 vpath %.c ${dir ${REPL_SOURCE_FILES}}
 REPL_OBJECT_FILES := ${notdir ${REPL_SOURCE_FILES:.c=.o}}
 
+ifneq (,${findstring ${TARGET},c64 c128 pet plus4 cx16})
+BINARY_FILE_EXTENSION := prg
+else ifneq (,${findstring ${TARGET},atari atarixl})
+BINARY_FILE_EXTENSION := com
+else
+${error Binary file extension not set for build target ${TARGET}}
+endif
 OUTPUT_DIRECTORY := out
-REPL_BINARY      := ${OUTPUT_DIRECTORY}/${TARGET}-repl.prg
+REPL_BINARY      := ${OUTPUT_DIRECTORY}/${TARGET}-repl.${BINARY_FILE_EXTENSION}
 
 .PHONY: all
 all: ${REPL_BINARY}
@@ -118,6 +130,10 @@ else ifeq (${TARGET}, pet)
 	xpet -silent $<                                # VICE.
 else ifeq (${TARGET}, cx16)
 	x16emu -rom /usr/share/x16-rom/rom.bin -prg $< # x16-emulator.
+else ifeq (${TARGET}, atari)
+	atari800 -run $< > /dev/null                   # atari800.
+else ifeq (${TARGET}, atarixl)
+	atari800 -xl -run $< > /dev/null                   # atari800.
 else
 	${error no emulator configured for REPL of build target ${TARGET}}
 endif

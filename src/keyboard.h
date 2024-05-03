@@ -37,7 +37,7 @@
  *                        mapped to something else.
  *
  * Supported build targets: c16, plus4, c64, c128, pet, cbm510, cbm610, vic20,
- *                          cx16.
+ *                          cx16, atari, atarixl.
  */
 
 #ifndef _KEYBOARD_H
@@ -72,7 +72,26 @@
 
 
 
-#else // __CBM__
+#elif defined(__ATARI__) // __CBM__
+
+#include <atari.h>
+
+#define KEYBOARD_UP        CH_CURS_UP
+#define KEYBOARD_DOWN      CH_CURS_DOWN
+#define KEYBOARD_LEFT      CH_CURS_LEFT
+#define KEYBOARD_RIGHT     CH_CURS_RIGHT
+#define KEYBOARD_BACKSPACE CH_DEL
+#define KEYBOARD_INSERT    KEY_INSERT
+#define KEYBOARD_ENTER     CH_ENTER
+#define KEYBOARD_STOP      CH_ESC
+#define KEYBOARD_HOME      CH_DELLINE
+#define KEYBOARD_CLEAR     CH_CLR
+#define KEYBOARD_F1        CH_F1
+#define KEYBOARD_F2        CH_F2
+
+
+
+#else // __ATARI__
 #error build target not supported
 #endif
 

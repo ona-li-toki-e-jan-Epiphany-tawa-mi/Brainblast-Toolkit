@@ -48,12 +48,16 @@ the computer's raw memory that you can control.
 
 Pressing STOP cancels the current input and starts a new line, similar to C-c.
 
+Pressing HOME moves to the start of the current input.
+
+Pressing CLR clears the screen and the current input.
+
 Pressing F1/F2 cycles backwards/forwards through the input history.
 
-Pressing F1 during while a program is running will abort it.
+Pressing STOP during while a program is running will abort it.
 
-*The functions of the F1 and F2 keys may be mapped to different keys depending
-on the system. The help menu will display the correct keys if this is the case.*
+*These functions may be mapped to different keys depending on the system. The
+help menu will display the correct keys if this is the case.*
 
 #### Commands
 
@@ -61,7 +65,7 @@ To execute these commands, put them at the start of the input line and press
 ENTER/RETURN:
 
 - `!` - exits the REPL.
-- `?` - displays the help menus.
+- `?` - displays the help menu.
 - `#` - outputs hexdump of the bytecode of the previous BASICfuck program. Holding SPACE will slow down the printing.
 
 ## How to build

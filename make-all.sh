@@ -20,7 +20,7 @@
 # Runs a make command for all targets, i.e.:
 #   ./make-all
 
-for TARGET in c64 c128 pet plus4 cx16; do
+for TARGET in c64 c128 pet plus4 cx16 atari atarixl; do
     make clean
     make "TARGET=${TARGET}" $@
 done
