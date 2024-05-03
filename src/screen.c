@@ -84,3 +84,23 @@ void utoa_fputs(const size_t digit_count, const uint value, const uchar radix) {
 
     (void)fputs(string_buffer, stdout);
 };
+
+
+
+/*
+ * Defined in header file.
+ */
+bool is_control_character(const uchar character) {
+#if defined(__CBM__)
+    // PETSCII character set.
+    return (character & 0x7F) < 0x20;
+#elif defined(__ATARI__)
+    // ATASCII character set.
+    return (character >= 0x1B && character <= 0x1F)
+        || (character >= 0x7D && character <= 0x7F)
+        || (character >= 0x8B && character <= 0x8F)
+        || (character >= 0xFD && character <= 0xFF);
+#else
+#error build target not supported
+#endif
+}

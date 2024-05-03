@@ -25,6 +25,7 @@
 #define _SCREEN_H
 
 #include <stdio.h>
+#include <stdbool.h>
 
 #include "types.h"
 
@@ -78,6 +79,13 @@ uchar blinking_cgetc();
  * @param radix - the base to use to generate the number string.
  */
 void utoa_fputs(const size_t digit_count, const uint value, const uchar radix);
+
+
+
+/**
+ * Returns whether the given character is a screen control character.
+ */
+bool is_control_character(const uchar character);
 
 
 

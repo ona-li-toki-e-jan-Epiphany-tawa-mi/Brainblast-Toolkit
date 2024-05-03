@@ -275,7 +275,7 @@ void edit_buffer(uchar *const buffer, uchar buffer_max_index) {
 
         // Handles typing characters.
         default:
-            if ((key & 0x7F) < 0x20)              // filter out unhandled control characters.
+            if (is_control_character(key))        // filter out unhandled control characters.
                 break;
             if (buffer_cursor > buffer_max_index)
                 break;
