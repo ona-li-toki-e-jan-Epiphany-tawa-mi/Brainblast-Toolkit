@@ -109,8 +109,6 @@ On the Commodore 64, the color of the border of the screen is stored at $D020. T
 
 #### Cat program / screen editor
 
-Note: you will have to restart the program after running this.
-
 ```brainfuck
 +[,.]
 ```

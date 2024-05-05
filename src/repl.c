@@ -160,7 +160,12 @@ void run_interpreter() {
         goto lfinish_interpreter_cycle;
 
     lopcode_input:
-        BASICfuck_memory[BASICfuck_memory_index] = wrapped_cgetc();
+        argument = wrapped_cgetc();
+        if (KEYBOARD_STOP == argument) {
+            puts("?ABORT");
+            break;
+        };
+        BASICfuck_memory[BASICfuck_memory_index] = argument;
         goto lfinish_interpreter_cycle;
 
     lopcode_jeq:
