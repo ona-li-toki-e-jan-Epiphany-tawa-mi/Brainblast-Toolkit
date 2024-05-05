@@ -2,12 +2,8 @@
 
 A brainfuck/BASICfuck REPL for 6502 machines.
 
-This project is a rewrite of the original version I wrote in BASIC, which you
-can find at any of the following links:
-
-- I2P: http://oytjumugnwsf4g72vemtamo72vfvgmp4lfsf6wmggcvba3qmcsta.b32.i2p/BASICfuck.git/about
-- Tor: http://4blcq4arxhbkc77tfrtmy4pptf55gjbhlj32rbfyskl672v2plsmjcyd.onion/BASICfuck.git/about
-- Clearnet: https://github.com/ona-li-toki-e-jan-Epiphany-tawa-mi/BASICfuck
+This project is a rewrite of the original version I wrote in BASIC for the
+Commodore 64, which you can find in the `BASIC` directory.
 
 This rewrite includes the following benefits:
 
@@ -131,15 +127,16 @@ to be more standard. You will have to switch it to the non-shifted set for this
 program. On the Commodore 64, and probably on other Commodore machines, you can
 do this by pressing SHIFT+Commodore key.
 
+Clone of `10 PRINT CHR$ (205.5 + RND (1)); : GOTO 10`.
+
 ```brainfuck
 ->+++++[-<---------->]<     Initializes the current cell to 205 the code for the backslash
 [>@)[<+>>]<<.>[<->>]<<<]    Prints out maze Prints a backslash if the selected memory cell is 0 or a forward slash if it is not
 ```
 
-This classic program, rewritten in BASICfuck, relies on reading the values
-stored in the computers's memory to generate "random" numbers. If the selected
-value in memory is 0, a backslash is printed; if it is not 0, then a forward
-slash will be printed.
+This program relies on reading the values stored in the computers's memory to
+generate "random" numbers. If the selected value in memory is 0, a backslash is
+printed; if it is not 0, then a forward slash will be printed.
 
 The data is random enough *some* of the time. You will find large areas with
 only one type of slash.
