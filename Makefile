@@ -43,7 +43,8 @@
 #     - plus4 (Commodore Plus/4, emulator: VICE)
 #     - cx16 (Commander X16, emulator: x16-emulator)
 #     - atari (All 8-bit Atari computers, emulator: atari800)
-#     - atarixl (8-bit Atari XL computers except for the 600XL, emulator: atari800)
+#     - atarixl (8-bit Atari computers, XL or newer, except for the 600XL,
+#       emulator: atari800)
 # - HISTORY_STACK_SIZE
 #     The size, in bytes, of the stack used to recall previous user inputs.
 # - BASICFUCK_MEMORY_SIZE
@@ -89,7 +90,7 @@ BINARY_FILE_EXTENSION := prg
 else ifneq (,${findstring ${TARGET},atari atarixl})
 BINARY_FILE_EXTENSION := com
 else
-${error Binary file extension not set for build target ${TARGET}}
+${error binary file extension not set for build target ${TARGET}}
 endif
 OUTPUT_DIRECTORY := out
 REPL_BINARY      := ${OUTPUT_DIRECTORY}/${TARGET}-repl.${BINARY_FILE_EXTENSION}

@@ -31,13 +31,10 @@
  * - KEYBOARD_STOP      - stop key.
  * - KEYBOARD_HOME      - home key.
  * - KEYBOARD_CLEAR     - clear key.
- * - KEYBOARD_F1        - function key 1. If not present on system, this will be
- *                        mapped to something else.
- * - KEYBOARD_F2        - function key 2. If not present on system, this will be
- *                        mapped to something else.
+ * - KEYBOARD_F1        - function key 1.
+ * - KEYBOARD_F2        - function key 2.
  *
- * Supported build targets: c16, plus4, c64, c128, pet, cbm510, cbm610, vic20,
- *                          cx16, atari, atarixl.
+ * If a key is not avalible on the system it will be mapped to some other key.
  */
 
 #ifndef _KEYBOARD_H
