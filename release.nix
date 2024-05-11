@@ -42,15 +42,7 @@ let pkgs = import nixpkgs {};
 
         nativeBuildInputs = with pkgs; [ cc65 ];
 
-        buildPhase = ''
-          runHook preBuild
-
-          substituteInPlace Makefile \
-              --replace "/usr/share/cc65" "${pkgs.cc65}/share"
-          make TARGET=${target}
-
-          runHook postBuild
-        '';
+        makeFlags = [ "TARGET=${target}" ];
 
         installPhase = ''
           runHook preInstall

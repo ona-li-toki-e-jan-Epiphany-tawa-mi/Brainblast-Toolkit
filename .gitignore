@@ -2,4 +2,6 @@
 *.o
 *.s
 *.prg
+
 out/
+result*
