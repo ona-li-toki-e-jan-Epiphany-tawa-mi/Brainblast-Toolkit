@@ -15,16 +15,20 @@
 # You should have received a copy of the GNU General Public License along with
 # Brainblast-Toolkit. If not, see <https://www.gnu.org/licenses/>.
 
-{ pkgs ? import <nixpkgs> {} }:
+{ nixpkgs ? builtins.fetchTarball "https://github.com/NixOS/nixpkgs/tarball/nixos-23.11" }:
 
-(pkgs.buildFHSEnv {
-  name = "cc65-build-environment";
-  targetPkgs = pkgs: with pkgs; [
-    cc65
-    gnumake
+let pkgs = import nixpkgs {};
+in
+(
+  pkgs.buildFHSEnv {
+    name = "cc65-build-environment";
+    targetPkgs = pkgs: with pkgs; [
+      cc65
+      gnumake
 
-    vice
-    x16-emulator x16-rom
-    atari800
-  ];
-}).env
+      vice
+      x16-emulator x16-rom
+      atari800
+    ];
+  }
+).env
