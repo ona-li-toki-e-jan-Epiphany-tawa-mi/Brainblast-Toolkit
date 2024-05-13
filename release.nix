@@ -18,43 +18,50 @@
 # release.nix for telling Hydra CI how to build the project.
 #
 # You can use the following command to build this/these derivation(s):
-#   nix build -f release.nix
+#   nix-build release.nix -A <attribute>
 # But you should probably use nix-shell + make instead.
 
 { nixpkgs ? builtins.fetchTarball "https://github.com/NixOS/nixpkgs/tarball/nixos-23.11"
-, system  ? builtins.currentSystem
+, targets ? [ "c64" "c128" "pet" "plus4" "cx16" "atari" "atarixl" ]
 }:
 
 let pkgs = import nixpkgs {};
-    src  = builtins.fetchGit ./.;
+    lib  = pkgs.lib;
 
-    buildTargets = [
-      "c64" "c128" "pet" "plus4"
-      "cx16"
-      "atari" "atarixl"
-    ];
+    binaryTarballFor = target: pkgs.stdenv.mkDerivation rec {
+        name = "brainblast-toolkit";
 
-    buildForTarget = target:
-      pkgs.releaseTools.nixBuild {
-        name = "brainblast-toolkit-${target}";
-
-        inherit src;
+        src = ./.;
 
         nativeBuildInputs = with pkgs; [ cc65 ];
-
         makeFlags = [ "TARGET=${target}" ];
 
+        # We don't need to do anything here but nix whines about not having an
+        # install target in the makefile without this.
         installPhase = ''
           runHook preInstall
-
-          cp out/* $out
-
           runHook postInstall
         '';
+
+        doDist    = true;
+        distPhase = ''
+          runHook preDist
+
+          mkdir -p $out/tarballs
+          tar -cjv -f $out/tarballs/${name}-binary-dist.tar.bz2 -C out/ .
+
+          runHook postDist
+        '';
+
+        postPhases = "finalPhase";
+        finalPhase = ''
+          mkdir -p $out/nix-support
+          for i in $out/tarballs/*; do
+              echo "file binary-dist $i" >> $out/nix-support/hydra-build-products
+          done
+        '';
       };
-in builtins.listToAttrs (
-  builtins.map (target: {
-    name  = target;
-    value = buildForTarget target;
-  }) buildTargets
-)
+in
+{
+  binaryTarball = lib.genAttrs targets binaryTarballFor;
+}

@@ -66,8 +66,8 @@ ENTER/RETURN:
 
 ## How to build
 
-You will need make and the cc65 toolchain. There is a `shell.nix` you can use
-with `nix-shell` to get them.
+You will need make and the cc65 toolchain. There is a `flake.nix` you can use
+with `nix develop` to get them.
 
 To build for a paticular system, you will need to specify the TARGET variable
 on the command line to make. By default it will build for the Commodore 64.
@@ -91,6 +91,11 @@ before:
 ```
 make runREPL TARGET=c64
 ```
+
+You can also grab precompiled binaries off of my Hydra instance at one of the
+following links:
+- I2P: http://oytjumugnwsf4g72vemtamo72vfvgmp4lfsf6wmggcvba3qmcsta.b32.i2p/hydra/jobset/brainblast-toolkit/master/latest-eval
+- Tor: http://4blcq4arxhbkc77tfrtmy4pptf55gjbhlj32rbfyskl672v2plsmjcyd.onion/hydra/jobset/brainblast-toolkit/master/latest-eval
 
 ## Example programs
 
