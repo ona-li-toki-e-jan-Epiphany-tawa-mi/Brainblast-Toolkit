@@ -34,7 +34,7 @@ let pkgs = import nixpkgs {};
         src = ./.;
 
         nativeBuildInputs = with pkgs; [ cc65 ];
-        makeFlags = [ "TARGET=${target}" ];
+        makeFlags         = [ "TARGET=${target}" ];
 
         # We don't need to do anything here but nix whines about not having an
         # install target in the makefile without this.

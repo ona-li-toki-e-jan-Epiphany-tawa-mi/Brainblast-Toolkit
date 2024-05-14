@@ -99,7 +99,7 @@ bool is_control_character(const uchar character) {
     return (character >= 0x1B && character <= 0x1F)
         || (character >= 0x7D && character <= 0x7F)
         || (character >= 0x8B && character <= 0x8F)
-        || (character >= 0xFD && character <= 0xFF);
+        || character >= 0xFD;
 #else
 #error build target not supported
 #endif

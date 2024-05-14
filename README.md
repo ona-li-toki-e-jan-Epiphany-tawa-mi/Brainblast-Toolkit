@@ -66,8 +66,11 @@ ENTER/RETURN:
 
 ## How to build
 
-You will need make and the cc65 toolchain. There is a `flake.nix` you can use
-with `nix develop` to get them.
+You will need make and the cc65 toolchain (https://cc65.github.io). There is a
+`flake.nix` you can use with `nix develop path:.` to get them.
+
+There are configuration options you can change in `config.mk`, mainly for memory
+sizes.
 
 To build for a paticular system, you will need to specify the TARGET variable
 on the command line to make. By default it will build for the Commodore 64.

@@ -22,6 +22,9 @@
  *
  * Requires BASICFUCK_MEMORY_SIZE to be defined to be the number of BASICfuck
  * cells to allocate for the REPL to use.
+ *
+ * Requires TOOLKIT_VERSION to be defined to be the version string for
+ * Brainblast-Toolkit
  */
 
 #include <conio.h>
@@ -353,7 +356,7 @@ int main(void) {
 
 
     clrscr();
-    (void)puts("Brainblast-Toolkit BASICfuck REPL 0.1.0\n");
+    (void)puts("Brainblast-Toolkit BASICfuck REPL " TOOLKIT_VERSION "\n");
     utoa_fputs(0, BASICFUCK_MEMORY_SIZE, 10);
     (void)puts(" CELLS FREE\n"
                "\n"

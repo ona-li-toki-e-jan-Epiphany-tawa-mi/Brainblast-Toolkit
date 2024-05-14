@@ -21,6 +21,5 @@
 #   ./make-all
 
 for TARGET in c64 c128 pet plus4 cx16 atari atarixl; do
-    make clean
-    make "TARGET=${TARGET}" $@
+    make -B "TARGET=${TARGET}" $@
 done
