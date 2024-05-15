@@ -88,7 +88,7 @@ endif
 
 CC65DIR     := /usr/share/cc65
 CC          := cl65
-CFLAGS      := -Osir --static-locals -Wc -W,error
+CFLAGS      ?= -Osir --static-locals -Wc -W,error
 ALL_CFLAGS  := $(CFLAGS) --target $(TARGET) --include-dir $(CC65DIR)/include --asm-include-dir $(CC65DIR)/asminc -D BASICFUCK_MEMORY_SIZE=$(BASICFUCK_MEMORY_SIZE)U -D HISTORY_STACK_SIZE=$(HISTORY_STACK_SIZE)U -D TOOLKIT_VERSION=\"$(TOOLKIT_VERSION)\"
 LD          := cl65
 LDFLAGS     := --target $(TARGET) --cfg-path $(CC65DIR)/cfg --lib-path $(CC65DIR)/lib
@@ -98,7 +98,7 @@ REPL_SOURCES := $(addprefix $(srcdir)/,repl.c bytecode_compiler.c opcodes.c text
 vpath %.c $(dir $(REPL_SOURCES))
 REPL_OBJECTS := $(notdir $(REPL_SOURCES:.c=.o))
 
-outdir      := out
+outdir      ?= out
 REPL_BINARY := $(outdir)/$(TARGET)-repl.$(BINARY_FILE_EXTENSION)
 
 .PHONY: all

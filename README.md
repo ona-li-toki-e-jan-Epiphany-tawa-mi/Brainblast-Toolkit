@@ -87,9 +87,8 @@ targets.
 
 There are also emulator commands set up to be invoked with the makefile with
 runREPL. The emulator needed will depend on the target system. Check the
-makefile for the required emulators (if you used `nix-shell`, they are already
-included in the `shell.nix`.) You may need to specify TARGET as well, like
-before:
+makefile for the required emulators (if you used `nix develop path:.`, they are already
+included.) You may need to specify TARGET as well, like before:
 
 ```
 make runREPL TARGET=c64
