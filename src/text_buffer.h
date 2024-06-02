@@ -19,9 +19,6 @@
 
 /*
  * Interactive text buffers.
- *
- * Requires HISTORY_STACK_SIZE to be defined to be the size of the history stack
- * buffer.
  */
 
 #ifndef _TEXT_BUFFER_H
@@ -41,8 +38,14 @@
  *
  * @param buffer - the buffer to store the typed characters into.
  * @param buffer_max_index - the maxiumum addressable index of the buffer.
+ * @param history_stack - the stack to store previous user inputs in. Set to
+ *        NULL to disable. The values of history_stack_size and
+ *        history_stack_index do not matter if NULL.
+ * @param history_stack_size - the size of the history stack.
+ * @param history_stack_index - a pointer to the current index into the history
+ *        stack.
  */
-void edit_buffer(uint8_t *const buffer, uint8_t buffer_max_index);
+void edit_buffer(uint8_t *const buffer, uint8_t buffer_max_index, uint8_t *const history_stack, const uint16_t history_stack_size, uint16_t *const history_stack_index);
 
 
 

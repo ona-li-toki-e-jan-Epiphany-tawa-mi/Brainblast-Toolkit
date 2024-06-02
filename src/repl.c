@@ -20,11 +20,10 @@
 /*
  * BASICfuck Read-Evaluate-Print Loop.
  *
- * Requires BASICFUCK_MEMORY_SIZE to be defined to be the number of BASICfuck
- * cells to allocate for the REPL to use.
- *
- * Requires TOOLKIT_VERSION to be defined to be the version string for
- * Brainblast-Toolkit
+ * Preprocessor parameters:
+ *  - BASICFUCK_MEMORY_SIZE - The number of BASICfuck cells (bytes) to allocate.
+ *  - TOOLKIT_VERSION - The version string for Brainblast-Toolkit.
+ *  - HISTORY_STACK_SIZE - The size, in bytes, of the history stack.
  */
 
 #include <conio.h>
@@ -347,7 +346,9 @@ void display_bytecode() {
 #define INPUT_BUFFER_SIZE 256U
 
 int main(void) {
-    uint8_t input_buffer[INPUT_BUFFER_SIZE];
+    uint8_t  input_buffer[INPUT_BUFFER_SIZE];
+    uint8_t  history_stack[HISTORY_STACK_SIZE];
+    uint16_t history_stack_index = 0;
 
     // Initializes global screen size variables in screen.h.
     screensize(&screen_width, &screen_height);
@@ -366,7 +367,7 @@ int main(void) {
     while (true) {
         // Run.
         (void)fputs("YOUR WILL? ", stdout);
-        edit_buffer(input_buffer, INPUT_BUFFER_SIZE - 1);
+        edit_buffer(input_buffer, INPUT_BUFFER_SIZE - 1, history_stack, HISTORY_STACK_SIZE, &history_stack_index);
 
         switch (input_buffer[0]) {
         case NULL:
