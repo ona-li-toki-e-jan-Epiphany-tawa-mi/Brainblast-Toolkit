@@ -43,195 +43,6 @@
 
 
 
-// Memory for the compiled bytecode of entered BASICfuck code.
-#define PROGRAM_MEMORY_SIZE 256U
-baf_opcode_t program_memory[PROGRAM_MEMORY_SIZE];
-
-// Interpreter state.
-uint8_t  BASICfuck_memory[BASICFUCK_MEMORY_SIZE]; // BASICfuck cell memory.
-uint16_t BASICfuck_memory_index  = 0;             // the current index into cell memory.
-uint8_t* computer_memory_pointer = 0;             // the current index into raw computer memory.
-
-// Global variables for exchaning values with inline assembler.
-uint8_t register_a, register_x, register_y;
-
-/**
- * Runs the execute part of the BASICfuck execute instruction.
- *
- * @param register_a (global) - the value to place in the A register.
- * @param register_x (global) - the value to place in the X register.
- * @param register_y (global) - the value to place in the Y register.
- * @param computer_memory_pointer (global) - the address to execute as a
- *                                           subroutine.
- */
-void execute() {
-    // Overwrites address of subroutine to call in next assembly block with the
-    // computer memory pointer's value.
-    __asm__ volatile ("lda     %v",   computer_memory_pointer);
-    __asm__ volatile ("sta     %g+1", ljump_instruction);
-    __asm__ volatile ("lda     %v+1", computer_memory_pointer);
-    __asm__ volatile ("sta     %g+2", ljump_instruction);
-    // Executes subroutine.
-    __asm__ volatile ("lda     %v",   register_a);
-    __asm__ volatile ("ldx     %v",   register_x);
-    __asm__ volatile ("ldy     %v",   register_y);
- ljump_instruction:
-    __asm__ volatile ("jsr     %w",   NULL);
-    // Retrieves resuting values.
-    __asm__ volatile ("sta     %v",   register_a);
-    __asm__ volatile ("stx     %v",   register_x);
-    __asm__ volatile ("sty     %v",   register_y);
-
-    return;
-    // If we don't include a jmp instruction, cc65, annoyingly, strips it from
-    // the resulting assembly.
-    __asm__ volatile ("jmp     %g", ljump_instruction);
-}
-
-/**
- * Runs the interpreter with the given bytecode-compiled BASICfuck program,
- * leaving the given starting state off wherever it the program finished at.
- *
- * @param program_memory (global) - the BASICfuck program. Must be no larger
- *        than 256 bytes.
- * @param BASICfuck_memory (global) - the starting address of BASICfuck memory.
- * @param BASICfuck_memory_index (global) - the current index into BASICfuck
- *        memory.
- * @param computer_memory_pointer (global) - the current index into raw computer
- *        memory.
- */
-void run_interpreter() {
-    baf_opcode_t opcode;
-    uint8_t      argument;
-
-    uint8_t program_index = 0;
-
-    static const void *const jump_table[] = {
-        &&lopcode_halt,                           // BAF_OPCODE_HALT.
-        &&lopcode_increment,                      // BAF_OPCODE_INCREMENT.
-        &&lopcode_decrement,                      // BAF_OPCODE_DECREMENT.
-        &&lopcode_bfmem_left,                     // BAF_OPCODE_BFMEM_LEFT.
-        &&lopcode_bfmem_right,                    // BAF_OPCODE_BFMEM_RIGHT.
-        &&lopcode_print,                          // BAF_OPCODE_PRINT.
-        &&lopcode_input,                          // BAF_OPCODE_INPUT.
-        &&lopcode_jeq,                            // BAF_OPCODE_JEQ.
-        &&lopcode_jne,                            // BAF_OPCODE_JNE.
-        &&lopcode_cmem_read,                      // BAF_OPCODE_CMEM_READ.
-        &&lopcode_cmem_write,                     // BAF_OPCODE_CMEM_WRITE.
-        &&lopcode_cmem_left,                      // BAF_OPCODE_CMEM_LEFT.
-        &&lopcode_cmem_right,                     // BAF_OPCODE_CMEM_RIGHT.
-        &&lopcode_execute                         // BAF_OPCODE_EXECUTE.
-    };
-
-
-    while (true) {
-        if (kbhit() != 0 && cgetc() == KEYBOARD_STOP) {
-            puts("?ABORT");
-            break;
-        }
-
-
-        opcode   = program_memory[program_index];
-        argument = program_memory[program_index+1];
-        assert(opcode < sizeof(jump_table)/sizeof(jump_table[0]) && "Unknown opcode");
-        goto *jump_table[opcode];
-
-    lopcode_halt:
-        break;
-
-    lopcode_increment:
-        BASICfuck_memory[BASICfuck_memory_index] += argument;
-        goto lfinish_interpreter_cycle;
-
-    lopcode_decrement:
-        BASICfuck_memory[BASICfuck_memory_index] -= argument;
-        goto lfinish_interpreter_cycle;
-
-    lopcode_bfmem_left:
-        if (BASICfuck_memory_index > argument) {
-            BASICfuck_memory_index -= argument;
-        } else {
-            BASICfuck_memory_index = 0;
-        }
-        goto lfinish_interpreter_cycle;
-
-    lopcode_bfmem_right:
-        if (BASICfuck_memory_index + argument < BASICFUCK_MEMORY_SIZE)
-            BASICfuck_memory_index += argument;
-        goto lfinish_interpreter_cycle;
-
-    lopcode_print:
-        (void)putchar(BASICfuck_memory[BASICfuck_memory_index]);
-        goto lfinish_interpreter_cycle;
-
-    lopcode_input:
-        argument = s_wrapped_cgetc();
-        if (KEYBOARD_STOP == argument) {
-            puts("?ABORT");
-            break;
-        };
-        BASICfuck_memory[BASICfuck_memory_index] = argument;
-        goto lfinish_interpreter_cycle;
-
-    lopcode_jeq:
-        if (BASICfuck_memory[BASICfuck_memory_index] == 0) {
-            // Since the program can only be 256 bytes long, we can ignore
-            // the high byte of the address.
-            program_index = argument;
-        }
-        goto lfinish_interpreter_cycle;
-
-    lopcode_jne:
-        if (BASICfuck_memory[BASICfuck_memory_index] != 0) {
-            // Since the program can only be 256 bytes long, we can ignore
-            // the high byte of the address.
-            program_index = argument;
-        }
-        goto lfinish_interpreter_cycle;
-
-    lopcode_cmem_read:
-        BASICfuck_memory[BASICfuck_memory_index] = *computer_memory_pointer;
-        goto lfinish_interpreter_cycle;
-
-    lopcode_cmem_write:
-        *computer_memory_pointer = BASICfuck_memory[BASICfuck_memory_index];
-        goto lfinish_interpreter_cycle;
-
-    lopcode_cmem_left:
-        if ((uint16_t)computer_memory_pointer > argument) {
-            computer_memory_pointer -= argument;
-        } else {
-            computer_memory_pointer = 0;
-        }
-        goto lfinish_interpreter_cycle;
-
-    lopcode_cmem_right:
-        if (UINT16_MAX - (uint16_t)computer_memory_pointer > argument) {
-            computer_memory_pointer += argument;
-        } else {
-            computer_memory_pointer = (uint8_t*)UINT16_MAX;
-        }
-        goto lfinish_interpreter_cycle;
-
-    lopcode_execute:
-        register_a = BASICfuck_memory[BASICfuck_memory_index];
-        register_x = BASICfuck_memory[BASICfuck_memory_index+1];
-        register_y = BASICfuck_memory[BASICfuck_memory_index+2];
-        execute();
-        BASICfuck_memory[BASICfuck_memory_index]   = register_a;
-        BASICfuck_memory[BASICfuck_memory_index+1] = register_x;
-        BASICfuck_memory[BASICfuck_memory_index+2] = register_y;
-        goto lfinish_interpreter_cycle;
-
-
-    lfinish_interpreter_cycle:
-        // Jumped to after an opcode has been executed.
-        program_index += baf_opcode_size_table[opcode];
-    }
-}
-
-
-
 // Gets name of the key controls for the user.
 #if defined(__CBM__)
 #define STOP_KEY_EQUIVALENT  "STOP"
@@ -308,6 +119,12 @@ void help_menu() {
     clrscr();
 }
 
+
+
+// Memory for the compiled bytecode of entered BASICfuck code.
+#define PROGRAM_MEMORY_SIZE 256U
+baf_opcode_t program_memory[PROGRAM_MEMORY_SIZE];
+
 /**
  * Displays a readout of the bytecode of the last program to the user. Holding
  * space will slow down the printing.
@@ -349,6 +166,11 @@ void display_bytecode() {
 #define INPUT_BUFFER_SIZE 256U
 
 int main(void) {
+    // Interpreter state.
+    uint8_t  BASICfuck_memory[BASICFUCK_MEMORY_SIZE];
+    uint16_t BASICfuck_memory_index  = 0;
+    uint8_t* computer_memory_pointer = 0;
+
     uint8_t  input_buffer[INPUT_BUFFER_SIZE];
     uint8_t  history_stack[HISTORY_STACK_SIZE];
     uint16_t history_stack_index = 0;
@@ -403,7 +225,7 @@ int main(void) {
             assert(false && "Unexpected bytecode compilation result");
         }
 
-        run_interpreter();
+        baf_interpret(program_memory, BASICfuck_memory, &BASICfuck_memory_index, &computer_memory_pointer);
 
         // Prints cell value.
         s_utoa_fputs(3, BASICfuck_memory[BASICfuck_memory_index], 10);
