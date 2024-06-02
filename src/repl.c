@@ -32,19 +32,20 @@
 #include <unistd.h>
 #include <assert.h>
 
+#include "keyboard.h"
 #define SCREEN_IMPLEMENTATION
 #define S_BUFFER_SIZE 6U
 #include "screen.h"
 #define TEXT_BUFFER_IMPLEMENTATION
 #include "text_buffer.h"
-#include "bytecode_compiler.h"
-#include "opcodes.h"
-#include "keyboard.h"
+#define BASICFUCK_IMPLEMENTATION
+#include "basicfuck.h"
+
 
 
 // Memory for the compiled bytecode of entered BASICfuck code.
 #define PROGRAM_MEMORY_SIZE 256U
-opcode_t program_memory[PROGRAM_MEMORY_SIZE];
+baf_opcode_t program_memory[PROGRAM_MEMORY_SIZE];
 
 // Interpreter state.
 uint8_t  BASICfuck_memory[BASICFUCK_MEMORY_SIZE]; // BASICfuck cell memory.
@@ -100,26 +101,26 @@ void execute() {
  *        memory.
  */
 void run_interpreter() {
-    opcode_t opcode;
-    uint8_t  argument;
+    baf_opcode_t opcode;
+    uint8_t      argument;
 
     uint8_t program_index = 0;
 
     static const void *const jump_table[] = {
-        &&lopcode_end_program,                    // BASICFUCK_END_PROGRAM.
-        &&lopcode_increment,                      // BASICFUCK_INCREMENT.
-        &&lopcode_decrement,                      // BAISCFUCK_DECREMENT.
-        &&lopcode_bfmemory_left,                  // BASICFUCK_BFMEMORY_LEFT.
-        &&lopcode_bfmemory_right,                 // BASICFUCK_BFMEMORY_RIGHT.
-        &&lopcode_print,                          // BASICFUCK_PRINT.
-        &&lopcode_input,                          // BASICFUCK_INPUT.
-        &&lopcode_jeq,                            // BASICFUCK_JEQ.
-        &&lopcode_jne,                            // BASICFUCK_JNE.
-        &&lopcode_cmemory_read,                   // BASICFUCK_CMEMORY_READ.
-        &&lopcode_cmemory_write,                  // BASICFUCK_CMEMORY_WRITE.
-        &&lopcode_cmemory_left,                   // BASICFUCK_CMEMORY_LEFT.
-        &&lopcode_cmemory_right,                  // BASICFUCK_CMEMORY_RIGHT.
-        &&lopcode_execute                         // BASICFUCK_EXECUTE.
+        &&lopcode_halt,                           // BAF_OPCODE_HALT.
+        &&lopcode_increment,                      // BAF_OPCODE_INCREMENT.
+        &&lopcode_decrement,                      // BAF_OPCODE_DECREMENT.
+        &&lopcode_bfmem_left,                     // BAF_OPCODE_BFMEM_LEFT.
+        &&lopcode_bfmem_right,                    // BAF_OPCODE_BFMEM_RIGHT.
+        &&lopcode_print,                          // BAF_OPCODE_PRINT.
+        &&lopcode_input,                          // BAF_OPCODE_INPUT.
+        &&lopcode_jeq,                            // BAF_OPCODE_JEQ.
+        &&lopcode_jne,                            // BAF_OPCODE_JNE.
+        &&lopcode_cmem_read,                      // BAF_OPCODE_CMEM_READ.
+        &&lopcode_cmem_write,                     // BAF_OPCODE_CMEM_WRITE.
+        &&lopcode_cmem_left,                      // BAF_OPCODE_CMEM_LEFT.
+        &&lopcode_cmem_right,                     // BAF_OPCODE_CMEM_RIGHT.
+        &&lopcode_execute                         // BAF_OPCODE_EXECUTE.
     };
 
 
@@ -135,7 +136,7 @@ void run_interpreter() {
         assert(opcode < sizeof(jump_table)/sizeof(jump_table[0]) && "Unknown opcode");
         goto *jump_table[opcode];
 
-    lopcode_end_program:
+    lopcode_halt:
         break;
 
     lopcode_increment:
@@ -146,7 +147,7 @@ void run_interpreter() {
         BASICfuck_memory[BASICfuck_memory_index] -= argument;
         goto lfinish_interpreter_cycle;
 
-    lopcode_bfmemory_left:
+    lopcode_bfmem_left:
         if (BASICfuck_memory_index > argument) {
             BASICfuck_memory_index -= argument;
         } else {
@@ -154,7 +155,7 @@ void run_interpreter() {
         }
         goto lfinish_interpreter_cycle;
 
-    lopcode_bfmemory_right:
+    lopcode_bfmem_right:
         if (BASICfuck_memory_index + argument < BASICFUCK_MEMORY_SIZE)
             BASICfuck_memory_index += argument;
         goto lfinish_interpreter_cycle;
@@ -188,15 +189,15 @@ void run_interpreter() {
         }
         goto lfinish_interpreter_cycle;
 
-    lopcode_cmemory_read:
+    lopcode_cmem_read:
         BASICfuck_memory[BASICfuck_memory_index] = *computer_memory_pointer;
         goto lfinish_interpreter_cycle;
 
-    lopcode_cmemory_write:
+    lopcode_cmem_write:
         *computer_memory_pointer = BASICfuck_memory[BASICfuck_memory_index];
         goto lfinish_interpreter_cycle;
 
-    lopcode_cmemory_left:
+    lopcode_cmem_left:
         if ((uint16_t)computer_memory_pointer > argument) {
             computer_memory_pointer -= argument;
         } else {
@@ -204,7 +205,7 @@ void run_interpreter() {
         }
         goto lfinish_interpreter_cycle;
 
-    lopcode_cmemory_right:
+    lopcode_cmem_right:
         if (UINT16_MAX - (uint16_t)computer_memory_pointer > argument) {
             computer_memory_pointer += argument;
         } else {
@@ -225,7 +226,7 @@ void run_interpreter() {
 
     lfinish_interpreter_cycle:
         // Jumped to after an opcode has been executed.
-        program_index += opcode_size_table[opcode];
+        program_index += baf_opcode_size_table[opcode];
     }
 }
 
@@ -355,7 +356,7 @@ int main(void) {
     // Initializes global screen size variables in screen.h.
     screensize(&s_width, &s_height);
     // Initializes the opcode table in opcodes.h.
-    initialize_instruction_opcode_table();
+    baf_initialize_instruction_opcode_table();
 
 
     clrscr();
@@ -389,14 +390,14 @@ int main(void) {
         }
 
         // Evaluate.
-        switch (bytecode_compile(input_buffer, program_memory, PROGRAM_MEMORY_SIZE)) {
-        case BCCOMPILE_OUT_OF_MEMORY:
+        switch (baf_compile(input_buffer, program_memory, PROGRAM_MEMORY_SIZE)) {
+        case BAF_COMPILE_OUT_OF_MEMORY:
             (void)puts("?OUT OF MEMORY");
             continue;
-        case BCCOMPILE_UNTERMINATED_LOOP:
+        case BAF_COMPILE_UNTERMINATED_LOOP:
             (void)puts("?UNTERMINATED LOOP");
             continue;
-        case BCCOMPILE_SUCCESS:
+        case BAF_COMPILE_SUCCESS:
             break;
         default:
             assert(false && "Unexpected bytecode compilation result");
