@@ -20,7 +20,7 @@
 /**
  * Abstract keyboard interface for the computers supported by cc65.
  *
- * Defines:
+ * Preprocessor returns:
  * - KEYBOARD_UP        - up arrow key.
  * - KEYBOARD_DOWN      - down arrow key.
  * - KEYBOARD_LEFT      - left arrow key.
@@ -90,7 +90,7 @@
 
 #else // __ATARI__
 #error build target not supported
-#endif
+#endif // #else
 
 
 

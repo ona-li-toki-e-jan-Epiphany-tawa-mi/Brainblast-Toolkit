@@ -94,7 +94,7 @@ LD          := cl65
 LDFLAGS     := --target $(TARGET) --cfg-path $(CC65DIR)/cfg --lib-path $(CC65DIR)/lib
 
 srcdir       := src
-REPL_SOURCES := $(addprefix $(srcdir)/,repl.c bytecode_compiler.c opcodes.c screen.c)
+REPL_SOURCES := $(addprefix $(srcdir)/,repl.c bytecode_compiler.c opcodes.c)
 vpath %.c $(dir $(REPL_SOURCES))
 REPL_OBJECTS := $(notdir $(REPL_SOURCES:.c=.o))
 

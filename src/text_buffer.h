@@ -43,9 +43,7 @@
  *
  * @param buffer - the buffer to store the typed characters into.
  * @param buffer_max_index - the maxiumum addressable index of the buffer.
- * @param history_stack - the stack to store previous user inputs in. Set to
- *        NULL to disable. The values of history_stack_size and
- *        history_stack_index do not matter if NULL.
+ * @param history_stack - the stack to store previous user inputs in.
  * @param history_stack_size - the size of the history stack.
  * @param history_stack_index - a pointer to the current index into the history
  *        stack.
@@ -224,7 +222,7 @@ void tb_edit_buffer(uint8_t *const buffer, uint8_t buffer_max_index) {
 
 
     while (true) {
-        key = blinking_cgetc();
+        key = s_blinking_cgetc();
 
         switch (key) {
         // Finalizes the buffer and exits from this function.
@@ -282,7 +280,7 @@ void tb_edit_buffer(uint8_t *const buffer, uint8_t buffer_max_index) {
         case KEYBOARD_UP:
             // Navigates to the next line up, or to the start of the buffer, if
             // there is no line there.
-            new_cursor = tb_cursor > screen_width ? tb_cursor - screen_width : 0;
+            new_cursor = tb_cursor > s_width ? tb_cursor - s_width : 0;
             for (; tb_cursor > new_cursor; --tb_cursor)
                 (void)putchar(KEYBOARD_LEFT);
 
@@ -291,7 +289,7 @@ void tb_edit_buffer(uint8_t *const buffer, uint8_t buffer_max_index) {
         case KEYBOARD_DOWN:
             // Navigates to the next line down, or to the end of the filled
             // buffer, if there is no line there.
-            new_cursor = (tb_input_size - tb_cursor) > screen_width ? tb_cursor + screen_width : tb_input_size;
+            new_cursor = (tb_input_size - tb_cursor) > s_width ? tb_cursor + s_width : tb_input_size;
             for (; tb_cursor < new_cursor; ++tb_cursor)
                 (void)putchar(KEYBOARD_RIGHT);
 
@@ -330,7 +328,7 @@ void tb_edit_buffer(uint8_t *const buffer, uint8_t buffer_max_index) {
 
         // Handles typing characters.
         default:
-            if (is_control_character(key))        // filter out unhandled control characters.
+            if (s_is_control_character(key))      // filter out unhandled control characters.
                 break;
             if (tb_cursor > buffer_max_index)
                 break;

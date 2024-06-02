@@ -32,13 +32,14 @@
 #include <unistd.h>
 #include <assert.h>
 
+#define SCREEN_IMPLEMENTATION
+#define S_BUFFER_SIZE 6U
+#include "screen.h"
 #define TEXT_BUFFER_IMPLEMENTATION
 #include "text_buffer.h"
 #include "bytecode_compiler.h"
 #include "opcodes.h"
 #include "keyboard.h"
-#include "screen.h"
-
 
 
 // Memory for the compiled bytecode of entered BASICfuck code.
@@ -163,7 +164,7 @@ void run_interpreter() {
         goto lfinish_interpreter_cycle;
 
     lopcode_input:
-        argument = wrapped_cgetc();
+        argument = s_wrapped_cgetc();
         if (KEYBOARD_STOP == argument) {
             puts("?ABORT");
             break;
@@ -274,7 +275,7 @@ void help_menu() {
                STOP_KEY_EQUIVALENT " - Abort BASICfuck program.\n"
                "\n");
     puts("Press ANY KEY to CONTINUE");
-    (void)wrapped_cgetc();
+    (void)s_wrapped_cgetc();
 
     clrscr();
     (void)puts("BASICfuck Instructions (Part 1):\n"
@@ -289,7 +290,7 @@ void help_menu() {
                "] - Jump to corresponding '[' if value of cell is not 0.\n"
                "\n");
     puts("Press ANY KEY to CONTINUE");
-    (void)wrapped_cgetc();
+    (void)s_wrapped_cgetc();
 
     clrscr();
     (void)puts("BASICfuck Instructions (Part 2):\n"
@@ -301,7 +302,7 @@ void help_menu() {
                "% - Execute location in computer memory as subroutine. The values of the current and next two cells will be used for the A, X, and Y registers. Resulting register values will be stored back into the respective cells.\n"
                "\n");
     puts("Press ANY KEY to CONTINUE");
-    (void)wrapped_cgetc();
+    (void)s_wrapped_cgetc();
 
     clrscr();
 }
@@ -316,7 +317,7 @@ void display_bytecode() {
     uint8_t i = 0;
 
     // Ideally display 16 bytes at a time, but screen real estate is what it is.
-    uint8_t bytes_per_line = (screen_width - 7) / 3;
+    uint8_t bytes_per_line = (s_width - 7) / 3;
     bytes_per_line = bytes_per_line > 16 ? 16 : bytes_per_line;
 
     while (true) {
@@ -327,12 +328,12 @@ void display_bytecode() {
 
             // Prints addresses.
             (void)fputs("\n$", stdout);
-            utoa_fputs(4, i, 16);
+            s_utoa_fputs(4, i, 16);
             (void)putchar(':');
         }
         // Prints values.
         (void)putchar(' ');
-        utoa_fputs(2, program_memory[i], 16);
+        s_utoa_fputs(2, program_memory[i], 16);
 
         if (i >= PROGRAM_MEMORY_SIZE - 1)
             break;
@@ -352,14 +353,14 @@ int main(void) {
     uint16_t history_stack_index = 0;
 
     // Initializes global screen size variables in screen.h.
-    screensize(&screen_width, &screen_height);
+    screensize(&s_width, &s_height);
     // Initializes the opcode table in opcodes.h.
     initialize_instruction_opcode_table();
 
 
     clrscr();
     (void)puts("Brainblast-Toolkit BASICfuck REPL " TOOLKIT_VERSION "\n");
-    utoa_fputs(0, BASICFUCK_MEMORY_SIZE, 10);
+    s_utoa_fputs(0, BASICFUCK_MEMORY_SIZE, 10);
     (void)puts(" CELLS FREE\n"
                "\n"
                "Enter '?' for HELP\n"
@@ -404,11 +405,11 @@ int main(void) {
         run_interpreter();
 
         // Prints cell value.
-        utoa_fputs(3, BASICfuck_memory[BASICfuck_memory_index], 10);
+        s_utoa_fputs(3, BASICfuck_memory[BASICfuck_memory_index], 10);
         (void)fputs(" (Cell ", stdout);
-        utoa_fputs(5, BASICfuck_memory_index, 10);
+        s_utoa_fputs(5, BASICfuck_memory_index, 10);
         (void)fputs(", Memory $", stdout);
-        utoa_fputs(4, (uint16_t)computer_memory_pointer, 16);
+        s_utoa_fputs(4, (uint16_t)computer_memory_pointer, 16);
         (void)puts(")");
     }
  lexit_repl:
