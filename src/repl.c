@@ -43,7 +43,7 @@
 
 // Memory for the compiled bytecode of entered BASICfuck code.
 #define PROGRAM_MEMORY_SIZE 256U
-Opcode program_memory[PROGRAM_MEMORY_SIZE];
+opcode_t program_memory[PROGRAM_MEMORY_SIZE];
 
 // Interpreter state.
 uint8_t  BASICfuck_memory[BASICFUCK_MEMORY_SIZE]; // BASICfuck cell memory.
@@ -99,8 +99,8 @@ void execute() {
  *        memory.
  */
 void run_interpreter() {
-    Opcode  opcode;
-    uint8_t argument;
+    opcode_t opcode;
+    uint8_t  argument;
 
     uint8_t program_index = 0;
 

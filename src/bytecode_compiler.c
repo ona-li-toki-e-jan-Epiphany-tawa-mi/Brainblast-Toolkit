@@ -51,8 +51,8 @@ uint16_t       compiler_write_buffer_size;        // the size of the write buffe
  * @return true if succeeded, false if ran out of memory.
  */
 bool compile_first_pass() {
-    uint8_t instruction;
-    uint8_t opcode;
+    uint8_t  instruction;
+    opcode_t opcode;
 
     // Used by counted instructions.
     uint16_t instruction_count;
@@ -169,8 +169,8 @@ bool compile_first_pass() {
 bool compile_second_pass() {
     uint16_t loop_depth;
     uint16_t seek_index;
-    uint8_t  opcode;
-    uint8_t  seeked_opcode;
+    opcode_t opcode;
+    opcode_t seeked_opcode;
 
     compiler_write_index = 0;
 

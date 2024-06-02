@@ -52,7 +52,7 @@ const uint8_t opcode_size_table[] = {
 /**
  * Defined in header file.
  */
-uint8_t instruction_opcode_table[256];
+opcode_t instruction_opcode_table[256];
 
 /**
  * Defined in header file.

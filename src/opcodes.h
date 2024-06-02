@@ -28,7 +28,7 @@
 
 
 
-typedef uint8_t Opcode;
+typedef uint8_t opcode_t;
 // Ends the current BASICfuck program.
 #define BASICFUCK_END_PROGRAM 0x00U
 // Increments the current cell.
@@ -86,7 +86,7 @@ extern const uint8_t opcode_size_table[];
  * Must call initialize_instruction_opcode_table() once prior to use.
  * If the given instruction does not have an opcode, 0xFF will be returned.
  */
-extern uint8_t instruction_opcode_table[];
+extern opcode_t instruction_opcode_table[];
 
 /**
  * A one-time-call function used to initialize instruction_opcode_table[].
