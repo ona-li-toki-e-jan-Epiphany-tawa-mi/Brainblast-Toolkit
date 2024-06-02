@@ -131,7 +131,7 @@ void run_interpreter() {
 
         opcode   = program_memory[program_index];
         argument = program_memory[program_index+1];
-        assert(opcode < sizeof(jump_table)/sizeof(jump_table[0]));
+        assert(opcode < sizeof(jump_table)/sizeof(jump_table[0]) && "Unknown opcode");
         goto *jump_table[opcode];
 
     lopcode_end_program:
@@ -393,6 +393,10 @@ int main(void) {
         case BCCOMPILE_UNTERMINATED_LOOP:
             (void)puts("?UNTERMINATED LOOP");
             continue;
+        case BCCOMPILE_SUCCESS:
+            break;
+        default:
+            assert(false && "Unexpected bytecode compilation result");
         }
 
         run_interpreter();
