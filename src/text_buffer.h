@@ -27,7 +27,7 @@
 #ifndef _TEXT_BUFFER_H
 #define _TEXT_BUFFER_H
 
-#include "types.h"
+#include <stdint.h>
 
 
 
@@ -42,7 +42,7 @@
  * @param buffer - the buffer to store the typed characters into.
  * @param buffer_max_index - the maxiumum addressable index of the buffer.
  */
-void edit_buffer(uchar *const buffer, uchar buffer_max_index);
+void edit_buffer(uint8_t *const buffer, uint8_t buffer_max_index);
 
 
 

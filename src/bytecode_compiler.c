@@ -31,11 +31,11 @@
 
 
 // Global variables for passing parameters between compiler functions.
-const uchar* compiler_read_buffer;                // the null-terminated buffer to read the program to compile from.
-uint         compiler_read_index;                 // an index into the read buffer.
-uchar*       compiler_write_buffer;               // the buffer to write the compiled program to.
-uint         compiler_write_index;                // an index into the write buffer.
-uint         compiler_write_buffer_size;          // the size of the write buffer.
+const uint8_t* compiler_read_buffer;              // the null-terminated buffer to read the program to compile from.
+uint16_t       compiler_read_index;               // an index into the read buffer.
+uint8_t*       compiler_write_buffer;             // the buffer to write the compiled program to.
+uint16_t       compiler_write_index;              // an index into the write buffer.
+uint16_t       compiler_write_buffer_size;        // the size of the write buffer.
 
 
 
@@ -51,13 +51,13 @@ uint         compiler_write_buffer_size;          // the size of the write buffe
  * @return true if succeeded, false if ran out of memory.
  */
 bool compile_first_pass() {
-    uchar instruction;
-    uchar opcode;
+    uint8_t instruction;
+    uint8_t opcode;
 
     // Used by counted instructions.
-    uint  instruction_count;
-    uchar other_instruction;
-    uchar chunk_count;
+    uint16_t instruction_count;
+    uint8_t  other_instruction;
+    uint8_t  chunk_count;
 
     static const void *const jump_table[] = {
         &&lfinish_bytecode_compilation,           // BASICFUCK_END_PROGRAM.
@@ -140,13 +140,13 @@ bool compile_first_pass() {
             if (compiler_write_index + 1 >= compiler_write_buffer_size)
                 return false;
 
-            chunk_count = instruction_count > 255 ? 255 : (uchar)instruction_count;
+            chunk_count = instruction_count > 255 ? 255 : (uint8_t)instruction_count;
 
             compiler_write_buffer[compiler_write_index]   = opcode;
             compiler_write_buffer[compiler_write_index+1] = chunk_count;
             compiler_write_index += 2;
 
-            instruction_count -= (uint)chunk_count;
+            instruction_count -= (uint16_t)chunk_count;
         }
 
         continue;
@@ -167,10 +167,10 @@ bool compile_first_pass() {
  * @return true if succeeded, false if there is an unterminated loop.
  */
 bool compile_second_pass() {
-    uint  loop_depth;
-    uint  seek_index;
-    uchar opcode;
-    uchar seeked_opcode;
+    uint16_t loop_depth;
+    uint16_t seek_index;
+    uint8_t  opcode;
+    uint8_t  seeked_opcode;
 
     compiler_write_index = 0;
 
@@ -194,9 +194,9 @@ bool compile_second_pass() {
 
                 if (loop_depth == 0) {
                     // Sets JEQ instruction to jump to accomanying JNE.
-                    *(uint*)(compiler_write_buffer + compiler_write_index+1) = seek_index;
+                    *(uint16_t*)(compiler_write_buffer + compiler_write_index+1) = seek_index;
                     // And vice-versa.
-                    *(uint*)(compiler_write_buffer + seek_index+1) = compiler_write_index;
+                    *(uint16_t*)(compiler_write_buffer + seek_index+1) = compiler_write_index;
 
                     break;
                 }
@@ -211,7 +211,7 @@ bool compile_second_pass() {
 
         case BASICFUCK_JNE:
             // Address should have been set by some preceeding JEQ instruction.
-            if (*(uint*)(compiler_write_buffer + compiler_write_index+1) == 0xFFFF)
+            if (*(uint16_t*)(compiler_write_buffer + compiler_write_index+1) == 0xFFFF)
                 return false;
 
             break;
@@ -229,7 +229,7 @@ bool compile_second_pass() {
 /**
  * Defined in header file.
  */
-ByteCodeCompileResult bytecode_compile(const uchar *const read_buffer, uchar *const write_buffer, const uint write_buffer_size) {
+ByteCodeCompileResult bytecode_compile(const uint8_t *const read_buffer, uint8_t *const write_buffer, const uint16_t write_buffer_size) {
     compiler_read_buffer       = read_buffer;
     compiler_read_index        = 0;
     compiler_write_buffer      = write_buffer;

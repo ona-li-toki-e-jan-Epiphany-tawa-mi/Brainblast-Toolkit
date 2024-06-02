@@ -24,11 +24,11 @@
 #ifndef _OPCODES_H
 #define _OPCODES_H
 
-#include "types.h"
+#include <stdint.h>
 
 
 
-typedef uchar Opcode;
+typedef uint8_t Opcode;
 // Ends the current BASICfuck program.
 #define BASICFUCK_END_PROGRAM 0x00U
 // Increments the current cell.
@@ -75,7 +75,7 @@ typedef uchar Opcode;
  *
  * Index value must be valid opcode.
  */
-extern const uchar opcode_size_table[];
+extern const uint8_t opcode_size_table[];
 
 
 
@@ -86,7 +86,7 @@ extern const uchar opcode_size_table[];
  * Must call initialize_instruction_opcode_table() once prior to use.
  * If the given instruction does not have an opcode, 0xFF will be returned.
  */
-extern uchar instruction_opcode_table[];
+extern uint8_t instruction_opcode_table[];
 
 /**
  * A one-time-call function used to initialize instruction_opcode_table[].

@@ -33,16 +33,16 @@
 /**
  * Defined in header file.
  */
-uchar screen_width  = 0
-    , screen_height = 0;
+uint8_t screen_width  = 0
+      , screen_height = 0;
 
 
 
 /**
  * Defined in header file.
  */
-uchar wrapped_cgetc() {
-    uchar character = 0;
+uint8_t wrapped_cgetc() {
+    uint8_t character = 0;
     do {
         character = cgetc();
     } while (0 == character);
@@ -53,8 +53,8 @@ uchar wrapped_cgetc() {
 /**
  * Defined in header file.
  */
-uchar blinking_cgetc() {
-    uchar character;
+uint8_t blinking_cgetc() {
+    uint8_t character;
 
     cursor(true);
     character = wrapped_cgetc();
@@ -66,12 +66,12 @@ uchar blinking_cgetc() {
 
 
 // Buffer used to convert numbers to strings.
-uchar string_buffer[STRING_BUFFER_SIZE];
+uint8_t string_buffer[STRING_BUFFER_SIZE];
 
 /*
  * Defined in header file.
  */
-void utoa_fputs(const size_t digit_count, const uint value, const uchar radix) {
+void utoa_fputs(const size_t digit_count, const uint16_t value, const uint8_t radix) {
     size_t leading_zeros;
 
     (void)utoa(value, string_buffer, radix);
@@ -90,7 +90,7 @@ void utoa_fputs(const size_t digit_count, const uint value, const uchar radix) {
 /*
  * Defined in header file.
  */
-bool is_control_character(const uchar character) {
+bool is_control_character(const uint8_t character) {
 #if defined(__CBM__)
     // PETSCII character set.
     return (character & 0x7F) < 0x20;

@@ -30,7 +30,7 @@
 /**
  * Defined in header file.
  */
-const uchar opcode_size_table[] = {
+const uint8_t opcode_size_table[] = {
     1,                                            // BASICFUCK_END_PROGRAM.
     2,                                            // BASICFUCK_INCREMENT.
     2,                                            // BASICFUCK_DECREMENT.
@@ -52,13 +52,13 @@ const uchar opcode_size_table[] = {
 /**
  * Defined in header file.
  */
-uchar instruction_opcode_table[256];
+uint8_t instruction_opcode_table[256];
 
 /**
  * Defined in header file.
  */
 void initialize_instruction_opcode_table() {
-    uchar i = 0;
+    uint8_t i = 0;
     for (; i < 255; i++)
         instruction_opcode_table[i] = 0xFF;
 

@@ -36,8 +36,8 @@
 /**
  * A stack to store previous inputs so they can be recalled.
  */
-uchar history_stack[HISTORY_STACK_SIZE];
-uint  history_stack_index = 0;
+uint8_t  history_stack[HISTORY_STACK_SIZE];
+uint16_t history_stack_index = 0;
 
 /**
  * Increments the history stack index and loops it around if it goes out of
@@ -64,9 +64,9 @@ void decrement_stack_index() {
 
 
 // Global variables for passing parameters between functions.
-uchar* current_buffer;                            // The buffer currently being edited.
-uchar  buffer_cursor;                             // The location of the user's cursor inside the buffer.
-uchar  input_size;                                // How much of the buffer is taken up by the text typed by the user.
+uint8_t* current_buffer;                          // The buffer currently being edited.
+uint8_t  buffer_cursor;                           // The location of the user's cursor inside the buffer.
+uint8_t  input_size;                              // How much of the buffer is taken up by the text typed by the user.
 
 /**
  * Saves the given null-terminated text buffer to the history stack for later
@@ -75,8 +75,8 @@ uchar  input_size;                                // How much of the buffer is t
  * @param current_buffer (global) - the null-terminated buffer to save.
  */
 void save_buffer() {
-    uchar character;
-    uchar buffer_index = 0;
+    uint8_t character;
+    uint8_t buffer_index = 0;
 
     do {
         character = current_buffer[buffer_index];
@@ -97,8 +97,8 @@ void save_buffer() {
  * @param forward_recall - which direction to move in in the history buffer.
  */
 void recall_buffer(const bool forward_recall) {
-    uchar character;
-    uint  final_history_index = history_stack_index;
+    uint8_t  character;
+    uint16_t final_history_index = history_stack_index;
 
     // Moves forwards or backwards to the next block in the history stack.
     if (forward_recall) {
@@ -157,9 +157,9 @@ void recall_buffer(const bool forward_recall) {
 /**
  * Defined in header file.
  */
-void edit_buffer(uchar *const buffer, uchar buffer_max_index) {
-    uchar new_cursor;
-    uchar key;
+void edit_buffer(uint8_t *const buffer, uint8_t buffer_max_index) {
+    uint8_t new_cursor;
+    uint8_t key;
 
     // Ensures the last byte is reserved for a null-terminator.
     buffer_max_index -= 1;

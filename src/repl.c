@@ -46,12 +46,12 @@
 Opcode program_memory[PROGRAM_MEMORY_SIZE];
 
 // Interpreter state.
-uchar  BASICfuck_memory[BASICFUCK_MEMORY_SIZE];   // BASICfuck cell memory.
-uint   BASICfuck_memory_index  = 0;               // the current index into cell memory.
-uchar* computer_memory_pointer = 0;               // the current index into raw computer memory.
+uint8_t  BASICfuck_memory[BASICFUCK_MEMORY_SIZE]; // BASICfuck cell memory.
+uint16_t BASICfuck_memory_index  = 0;             // the current index into cell memory.
+uint8_t* computer_memory_pointer = 0;             // the current index into raw computer memory.
 
 // Global variables for exchaning values with inline assembler.
-uchar register_a, register_x, register_y;
+uint8_t register_a, register_x, register_y;
 
 /**
  * Runs the execute part of the BASICfuck execute instruction.
@@ -99,10 +99,10 @@ void execute() {
  *        memory.
  */
 void run_interpreter() {
-    Opcode opcode;
-    uchar  argument;
+    Opcode  opcode;
+    uint8_t argument;
 
-    uchar program_index = 0;
+    uint8_t program_index = 0;
 
     static const void *const jump_table[] = {
         &&lopcode_end_program,                    // BASICFUCK_END_PROGRAM.
@@ -196,7 +196,7 @@ void run_interpreter() {
         goto lfinish_interpreter_cycle;
 
     lopcode_cmemory_left:
-        if ((uint)computer_memory_pointer > argument) {
+        if ((uint16_t)computer_memory_pointer > argument) {
             computer_memory_pointer -= argument;
         } else {
             computer_memory_pointer = 0;
@@ -204,10 +204,10 @@ void run_interpreter() {
         goto lfinish_interpreter_cycle;
 
     lopcode_cmemory_right:
-        if (UINT_MAX - (uint)computer_memory_pointer > argument) {
+        if (UINT16_MAX - (uint16_t)computer_memory_pointer > argument) {
             computer_memory_pointer += argument;
         } else {
-            computer_memory_pointer = (uchar*)UINT_MAX;
+            computer_memory_pointer = (uint8_t*)UINT16_MAX;
         }
         goto lfinish_interpreter_cycle;
 
@@ -313,10 +313,10 @@ void help_menu() {
  * @param program (global) - the program buffer.
  */
 void display_bytecode() {
-    uchar i = 0;
+    uint8_t i = 0;
 
     // Ideally display 16 bytes at a time, but screen real estate is what it is.
-    uchar bytes_per_line = (screen_width - 7) / 3;
+    uint8_t bytes_per_line = (screen_width - 7) / 3;
     bytes_per_line = bytes_per_line > 16 ? 16 : bytes_per_line;
 
     while (true) {
@@ -347,7 +347,7 @@ void display_bytecode() {
 #define INPUT_BUFFER_SIZE 256U
 
 int main(void) {
-    uchar input_buffer[INPUT_BUFFER_SIZE];
+    uint8_t input_buffer[INPUT_BUFFER_SIZE];
 
     // Initializes global screen size variables in screen.h.
     screensize(&screen_width, &screen_height);
@@ -402,7 +402,7 @@ int main(void) {
         (void)fputs(" (Cell ", stdout);
         utoa_fputs(5, BASICfuck_memory_index, 10);
         (void)fputs(", Memory $", stdout);
-        utoa_fputs(4, (uint)computer_memory_pointer, 16);
+        utoa_fputs(4, (uint16_t)computer_memory_pointer, 16);
         (void)puts(")");
     }
  lexit_repl:

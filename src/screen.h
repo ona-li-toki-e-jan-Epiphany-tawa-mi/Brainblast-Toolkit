@@ -26,8 +26,7 @@
 
 #include <stdio.h>
 #include <stdbool.h>
-
-#include "types.h"
+#include <stdint.h>
 
 
 
@@ -35,8 +34,8 @@
  * The width and height of the screen. Must be initalized at some point with
  * screensize(), or some other method, else they will be set to 0.
  */
-extern uchar screen_width
-           , screen_height;
+extern uint8_t screen_width
+             , screen_height;
 
 
 
@@ -46,7 +45,7 @@ extern uchar screen_width
  *
  * @return the value of the typed character.
  */
-uchar wrapped_cgetc();
+uint8_t wrapped_cgetc();
 
 /**
  * Runs wrapped_cgetc() with a blinking cursor.
@@ -57,7 +56,7 @@ uchar wrapped_cgetc();
  *
  * @return the value of the typed character.
  */
-uchar blinking_cgetc();
+uint8_t blinking_cgetc();
 
 
 
@@ -78,14 +77,14 @@ uchar blinking_cgetc();
  * @param value - the value to print.
  * @param radix - the base to use to generate the number string.
  */
-void utoa_fputs(const size_t digit_count, const uint value, const uchar radix);
+void utoa_fputs(const size_t digit_count, const uint16_t value, const uint8_t radix);
 
 
 
 /**
  * Returns whether the given character is a screen control character.
  */
-bool is_control_character(const uchar character);
+bool is_control_character(const uint8_t character);
 
 
 

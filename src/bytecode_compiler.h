@@ -24,11 +24,11 @@
 #ifndef _BYTECODE_COMPILER_H
 #define _BYTECODE_COMPILER_H
 
-#include "types.h"
+#include <stdint.h>
 
 
 
-typedef uchar ByteCodeCompileResult;
+typedef uint8_t ByteCodeCompileResult;
 #define BCCOMPILE_SUCCESS           0U
 #define BCCOMPILE_OUT_OF_MEMORY     1U
 #define BCCOMPILE_UNTERMINATED_LOOP 2U
@@ -44,7 +44,7 @@ typedef uchar ByteCodeCompileResult;
  *         program memory,
  *         BCCOMPILE_UNTERMINATED_LOOP if the program has an unterminated loop.
  */
-ByteCodeCompileResult bytecode_compile(const uchar *const read_buffer, uchar *const write_buffer, const uint write_buffer_size);
+ByteCodeCompileResult bytecode_compile(const uint8_t *const read_buffer, uint8_t *const write_buffer, const uint16_t write_buffer_size);
 
 
 
