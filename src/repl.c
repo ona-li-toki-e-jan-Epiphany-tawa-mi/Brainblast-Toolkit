@@ -32,6 +32,7 @@
 #include <unistd.h>
 #include <assert.h>
 
+#define TEXT_BUFFER_IMPLEMENTATION
 #include "text_buffer.h"
 #include "bytecode_compiler.h"
 #include "opcodes.h"
@@ -367,7 +368,7 @@ int main(void) {
     while (true) {
         // Run.
         (void)fputs("YOUR WILL? ", stdout);
-        edit_buffer(input_buffer, INPUT_BUFFER_SIZE - 1, history_stack, HISTORY_STACK_SIZE, &history_stack_index);
+        tb_edit_buffer(input_buffer, INPUT_BUFFER_SIZE - 1, history_stack, HISTORY_STACK_SIZE, &history_stack_index);
 
         switch (input_buffer[0]) {
         case NULL:
