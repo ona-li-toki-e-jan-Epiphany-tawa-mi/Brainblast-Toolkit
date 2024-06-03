@@ -85,8 +85,8 @@ static void help_menu() {
                F2_KEY_EQUIVALENT " - Next history item.\n"
                "\n"
                STOP_KEY_EQUIVALENT " - Abort BASICfuck program.\n"
-               "\n");
-    puts("Press ANY KEY to CONTINUE");
+               "\n"
+               "Press ANY KEY to CONTINUE");
     (void)s_wrapped_cgetc();
 
     clrscr();
@@ -100,8 +100,8 @@ static void help_menu() {
                ", - Store value of key from keyboard in cell.\n"
                "[ - Jump to corresponding ']' if value of cell is 0.\n"
                "] - Jump to corresponding '[' if value of cell is not 0.\n"
-               "\n");
-    puts("Press ANY KEY to CONTINUE");
+               "\n"
+               "Press ANY KEY to CONTINUE");
     (void)s_wrapped_cgetc();
 
     clrscr();
@@ -112,8 +112,8 @@ static void help_menu() {
                "@ - Read value from computer memory into cell.\n"
                "* - Write value from cell into computer memory\n"
                "% - Execute location in computer memory as subroutine. The values of the current and next two cells will be used for the A, X, and Y registers. Resulting register values will be stored back into the respective cells.\n"
-               "\n");
-    puts("Press ANY KEY to CONTINUE");
+               "\n"
+               "Press ANY KEY to CONTINUE");
     (void)s_wrapped_cgetc();
 
     clrscr();

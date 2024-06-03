@@ -120,6 +120,9 @@ static void tb_save_buffer() {
     uint8_t character;
     uint8_t buffer_index = 0;
 
+    if (NULL == tb_buffer[buffer_index])
+        return;
+
     do {
         character = tb_buffer[buffer_index];
         tb_history_stack[*tb_history_stack_index] = character;
