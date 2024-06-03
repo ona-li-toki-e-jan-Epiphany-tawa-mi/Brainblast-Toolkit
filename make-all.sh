@@ -1,4 +1,4 @@
-#!/usr/bin/env sh
+#!/usr/bin/env bash
 
 # This file is part of Brainblast-Toolkit.
 #
@@ -19,6 +19,8 @@
 
 # Runs a make command for all targets, i.e.:
 #   ./make-all
+
+set -eu
 
 for TARGET in c64 c128 pet plus4 cx16 atari atarixl; do
     make -B "TARGET=${TARGET}" $@
