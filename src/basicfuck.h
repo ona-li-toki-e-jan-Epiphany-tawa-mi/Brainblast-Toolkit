@@ -102,19 +102,27 @@ typedef uint8_t BAFCompileResult;
 #define BAF_COMPILE_OUT_OF_MEMORY     1U
 #define BAF_COMPILE_UNTERMINATED_LOOP 2U
 
+// Compiler state.
+extern const uint8_t* baf_compiler_read_buffer;
+extern uint8_t*       baf_compiler_write_buffer;
+extern uint16_t       baf_compiler_buffer_size;
+
 /**
  * Bytecode compiles BASICfuck code.
  *
- * @param read_buffer - the null-terminated program text buffer to compile.
- * @param write_buffer - the buffer to write the compiled program to.
- * @param write_buffer_size - the size of the program memory buffer.
+ * @param baf_compiler_read_buffer (global) - the null-terminated program text
+ *                                            buffer to compile.
+ * @param baf_compiler_write_buffer (global) - the buffer to write the compiled
+ *                                             program to.
+ * @param baf_compiler_write_buffer_size (global) - the size of the program
+ *                                                  memory buffer.
  * @return BAF_COMPILE_SUCCESS on success,
  *         BAF_COMPILE_OUT_OF_MEMORY if the program exceeded the size of the
  *         program memory,
  *         BAF_COMPILE_UNTERMINATED_LOOP if the program has an unterminated
  *         loop.
  */
-BAFCompileResult baf_compile(const uint8_t *const read_buffer, uint8_t *const write_buffer, const uint16_t write_buffer_size);
+BAFCompileResult baf_compile();
 #endif // BASICFUCK_DISABLE_COMPILER
 
 
@@ -130,11 +138,12 @@ extern uint8_t*       baf_interpreter_cmem_pointer;
  * Runs the interpreter with the given bytecode-compiled BASICfuck program,
  * leaving the given starting state off wherever it the program finished at.
  *
- * @param program_memory (global) - the BASICfuck program.
- * @param bfmem (global) - the BASICfuck memory buffer.
- * @param bfmem_size (global) - the size of the memory buffer.
- * @param bfmem_index (global) - the current index in BASICfuck memory.
- * @param cmem_pointer (global) - the current pointer into RAM.
+ * @param baf_interpreter_program_memory (global) - the BASICfuck program.
+ * @param baf_interpreter_bfmem (global) - the BASICfuck memory buffer.
+ * @param baf_interpreter_bfmem_size (global) - the size of the memory buffer.
+ * @param baf_interpreter_bfmem_index (global) - the current index in BASICfuck
+ *                                               memory.
+ * @param baf_interpreter_cmem_pointer (global) - the current pointer into RAM.
  */
 void baf_interpret();
 #endif // BASICFUCK_DISABLE_INTERPRETER
@@ -187,22 +196,25 @@ void baf_initialize_instruction_opcode_table() {
 }
 
 #ifndef BASICFUCK_DISABLE_COMPILER
-// Global variables for passing parameters between compiler functions.
-static const uint8_t* baf_compiler_read_buffer;       // the null-terminated buffer to read the program to compile from.
-static uint16_t       baf_compiler_read_index;        // an index into the read buffer.
-static uint8_t*       baf_compiler_write_buffer;      // the buffer to write the compiled program to.
-static uint16_t       baf_compiler_write_index;       // an index into the write buffer.
-static uint16_t       baf_compiler_write_buffer_size; // the size of the write buffer.
+// Compiler state.
+const uint8_t*  baf_compiler_read_buffer;
+static uint16_t baf_compiler_read_index;          // an index into the read buffer.
+uint8_t*        baf_compiler_write_buffer;
+static uint16_t baf_compiler_write_index;         // an index into the write buffer
+uint16_t        baf_compiler_write_buffer_size;
 
 /**
  * Performs the first pass of BASICfuck compilation, converting the text program
  * to opcodes.
  *
- * @param compiler_read_buffer (global) - the read buffer.
- * @param compiler_read_index (global) - the current index into the read buffer.
- * @param compiler_write_buffer (global) - the write buffer.
- * @param compiler_write_index (global) - the current index into the write buffer.
- * @param compiler_write_buffer_size (global) - the size of the write buffer.
+ * @param baf_compiler_read_buffer (global) - the read buffer.
+ * @param baf_compiler_read_index (global) - the current index into the read
+ *                                           buffer.
+ * @param baf_compiler_write_buffer (global) - the write buffer.
+ * @param baf_compiler_write_index (global) - the current index into the write
+ *                                            buffer.
+ * @param baf_compiler_write_buffer_size (global) - the size of the write
+ *                                                  buffer.
  * @return true if succeeded, false if ran out of memory.
  */
 static bool baf_compile_first_pass() {
@@ -315,8 +327,7 @@ static bool baf_compile_first_pass() {
  * Performs the second pass of BASICfuck compilation, calculating the addresses
  * for jump instructions.
  *
- * @param write_buffer (global) - the write buffer.
- * @param compiler_state - the current state of the compiler.
+ * @param baf_compiler_write_buffer (global) - the write buffer.
  * @return true if succeeded, false if there is an unterminated loop.
  */
 static bool baf_compile_second_pass() {
@@ -376,13 +387,12 @@ static bool baf_compile_second_pass() {
     return true;
 }
 
-BAFCompileResult baf_compile(const uint8_t *const read_buffer, uint8_t *const write_buffer, const uint16_t write_buffer_size) {
-    baf_compiler_read_buffer       = read_buffer;
-    baf_compiler_read_index        = 0;
-    baf_compiler_write_buffer      = write_buffer;
-    baf_compiler_write_index       = 0;
+BAFCompileResult baf_compile() {
+    baf_compiler_read_index  = 0;
+    baf_compiler_write_index = 0;
+
     // The last location is reserved for end of program.
-    baf_compiler_write_buffer_size = write_buffer_size - 1;
+    baf_compiler_write_buffer_size -= 1;
 
     if (!baf_compile_first_pass())
         return BAF_COMPILE_OUT_OF_MEMORY;
@@ -390,6 +400,7 @@ BAFCompileResult baf_compile(const uint8_t *const read_buffer, uint8_t *const wr
     if (!baf_compile_second_pass())
         return BAF_COMPILE_UNTERMINATED_LOOP;
 
+    baf_compiler_write_buffer_size += 1;
     return BAF_COMPILE_SUCCESS;
 }
 #endif // BASICFUCK_DISABLE_COMPILER

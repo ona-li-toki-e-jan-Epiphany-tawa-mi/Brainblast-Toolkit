@@ -68,7 +68,7 @@
 /**
  * Runs the help menu, telling the user about the REPL and it's functions.
  */
-void help_menu() {
+static void help_menu() {
     clrscr();
     (void)puts("REPL Commands (must be at start of line):\n"
                "\n"
@@ -123,7 +123,7 @@ void help_menu() {
 
 // Memory for the compiled bytecode of entered BASICfuck code.
 #define PROGRAM_MEMORY_SIZE 256U
-baf_opcode_t program_memory[PROGRAM_MEMORY_SIZE];
+static baf_opcode_t program_memory[PROGRAM_MEMORY_SIZE];
 
 /**
  * Displays a readout of the bytecode of the last program to the user. Holding
@@ -131,7 +131,7 @@ baf_opcode_t program_memory[PROGRAM_MEMORY_SIZE];
  *
  * @param program (global) - the program buffer.
  */
-void display_bytecode() {
+static void display_bytecode() {
     uint8_t i = 0;
 
     // Ideally display 16 bytes at a time, but screen real estate is what it is.
@@ -166,7 +166,7 @@ void display_bytecode() {
 #define INPUT_BUFFER_SIZE 256U
 
 int main(void) {
-    uint8_t  BASICfuck_memory[BASICFUCK_MEMORY_SIZE];
+    uint8_t BASICfuck_memory[BASICFUCK_MEMORY_SIZE];
 
     uint8_t  input_buffer[INPUT_BUFFER_SIZE];
     uint8_t  history_stack[HISTORY_STACK_SIZE];
@@ -176,6 +176,11 @@ int main(void) {
     screensize(&s_width, &s_height);
     // Initializes the opcode table in basicfuck.h.
     baf_initialize_instruction_opcode_table();
+
+    // Initalizes the compiler.
+    baf_compiler_read_buffer       = input_buffer;
+    baf_compiler_write_buffer      = program_memory;
+    baf_compiler_write_buffer_size = PROGRAM_MEMORY_SIZE;
 
     // Initializes the interpreter.
     baf_interpreter_program_memory = program_memory;
@@ -216,7 +221,7 @@ int main(void) {
         }
 
         // Evaluate.
-        switch (baf_compile(input_buffer, program_memory, PROGRAM_MEMORY_SIZE)) {
+        switch (baf_compile()) {
         case BAF_COMPILE_OUT_OF_MEMORY:
             (void)puts("?OUT OF MEMORY");
             continue;
