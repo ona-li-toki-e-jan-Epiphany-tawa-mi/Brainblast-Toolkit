@@ -166,10 +166,7 @@ void display_bytecode() {
 #define INPUT_BUFFER_SIZE 256U
 
 int main(void) {
-    // Interpreter state.
     uint8_t  BASICfuck_memory[BASICFUCK_MEMORY_SIZE];
-    uint16_t BASICfuck_memory_index  = 0;
-    uint8_t* computer_memory_pointer = 0;
 
     uint8_t  input_buffer[INPUT_BUFFER_SIZE];
     uint8_t  history_stack[HISTORY_STACK_SIZE];
@@ -179,6 +176,13 @@ int main(void) {
     screensize(&s_width, &s_height);
     // Initializes the opcode table in basicfuck.h.
     baf_initialize_instruction_opcode_table();
+
+    // Initializes the interpreter.
+    baf_interpreter_program_memory = program_memory;
+    baf_interpreter_bfmem          = BASICfuck_memory;
+    baf_interpreter_bfmem_size     = BASICFUCK_MEMORY_SIZE;
+    baf_interpreter_bfmem_index    = 0;
+    baf_interpreter_cmem_pointer   = 0;
 
 
     clrscr();
@@ -225,14 +229,14 @@ int main(void) {
             assert(false && "Unexpected bytecode compilation result");
         }
 
-        baf_interpret(program_memory, BASICfuck_memory, &BASICfuck_memory_index, &computer_memory_pointer);
+        baf_interpret();
 
         // Prints cell value.
-        s_utoa_fputs(3, BASICfuck_memory[BASICfuck_memory_index], 10);
+        s_utoa_fputs(3, baf_interpreter_bfmem[baf_interpreter_bfmem_index], 10);
         (void)fputs(" (Cell ", stdout);
-        s_utoa_fputs(5, BASICfuck_memory_index, 10);
+        s_utoa_fputs(5, baf_interpreter_bfmem_index, 10);
         (void)fputs(", Memory $", stdout);
-        s_utoa_fputs(4, (uint16_t)computer_memory_pointer, 16);
+        s_utoa_fputs(4, (uint16_t)baf_interpreter_cmem_pointer, 16);
         (void)puts(")");
     }
  lexit_repl:
