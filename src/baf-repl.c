@@ -177,7 +177,7 @@ int main(void) {
 
     // Initializes global screen size variables in screen.h.
     screensize(&s_width, &s_height);
-    // Initializes the opcode table in opcodes.h.
+    // Initializes the opcode table in basicfuck.h.
     baf_initialize_instruction_opcode_table();
 
 

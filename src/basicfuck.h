@@ -123,9 +123,8 @@ BAFCompileResult baf_compile(const uint8_t *const read_buffer, uint8_t *const wr
  * Runs the interpreter with the given bytecode-compiled BASICfuck program,
  * leaving the given starting state off wherever it the program finished at.
  *
- * @param program_memory - the BASICfuck program. Must be no larger than 256
- *        bytes.
- * @param bfmem - a pointer to the BASICfuck memory buffer..
+ * @param program_memory - the BASICfuck program.
+ * @param bfmem - a pointer to the BASICfuck memory buffer.
  * @param bfmem_index - a pointer to the current index in BASICfuck memory.
  * @param cmem_pointer - a pointer to the current pointer into RAM.
  */
@@ -434,7 +433,7 @@ void baf_interpret(const uint8_t *const program_memory, uint8_t *const bfmem, ui
     baf_opcode_t opcode;
     uint8_t      argument;
 
-    uint8_t program_index = 0;
+    uint16_t program_index = 0;
 
     static const void *const jump_table[] = {
         &&lopcode_halt,                           // BAF_OPCODE_HALT.
