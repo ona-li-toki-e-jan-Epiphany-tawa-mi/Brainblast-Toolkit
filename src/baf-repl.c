@@ -37,7 +37,7 @@
 #define S_BUFFER_SIZE 6U
 #include "screen.h"
 #define TEXT_BUFFER_IMPLEMENTATION
-#include "text_buffer.h"
+#include "text-buffer.h"
 #define BASICFUCK_IMPLEMENTATION
 #include "basicfuck.h"
 

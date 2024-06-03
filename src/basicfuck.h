@@ -24,7 +24,7 @@
  * - BASICFUCK_IMPLEMENTATION - Define in *one* source file to instantiate the
  *                              implementation.
  * - BASICFUCK_DISABLE_COMPILER - If defined, strips out compiler code.
- * - BASICFUCK_DISABLE_COMPILER - If defined, strips out interpreter code.
+ * - BASICFUCK_DISABLE_INTERPRETER - If defined, strips out interpreter code.
  */
 
 #ifndef _BASICFUCK_H
@@ -96,6 +96,7 @@ extern baf_opcode_t baf_instruction_opcode_table[];
 void baf_initialize_instruction_opcode_table();
 
 
+#ifndef BASICFUCK_DISABLE_COMPILER
 typedef uint8_t BAFCompileResult;
 #define BAF_COMPILE_SUCCESS           0U
 #define BAF_COMPILE_OUT_OF_MEMORY     1U
@@ -113,7 +114,6 @@ typedef uint8_t BAFCompileResult;
  *         BAF_COMPILE_UNTERMINATED_LOOP if the program has an unterminated
  *         loop.
  */
-#ifndef BASICFUCK_DISABLE_COMPILER
 BAFCompileResult baf_compile(const uint8_t *const read_buffer, uint8_t *const write_buffer, const uint16_t write_buffer_size);
 #endif // BASICFUCK_DISABLE_COMPILER
 
@@ -130,7 +130,7 @@ BAFCompileResult baf_compile(const uint8_t *const read_buffer, uint8_t *const wr
  * @param cmem_pointer - a pointer to the current pointer into RAM.
  */
 void baf_interpret(const uint8_t *const program_memory, uint8_t *const bfmem, uint16_t *const bfmem_index, uint8_t* *const cmem_pointer);
-#endif BASICFUCK_DISABLE_INTERPRETER
+#endif // BASICFUCK_DISABLE_INTERPRETER
 
 
 

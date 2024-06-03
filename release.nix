@@ -48,7 +48,7 @@ let pkgs = import nixpkgs {};
           runHook preDist
 
           mkdir -p $out/tarballs
-          tar -cjv -f $out/tarballs/${name}-binary-dist.tar.bz2 -C out/ .
+          tar -cjv -f $out/tarballs/${name}-binary-dist.tar.bz2 -C ${target}/ .
 
           runHook postDist
         '';

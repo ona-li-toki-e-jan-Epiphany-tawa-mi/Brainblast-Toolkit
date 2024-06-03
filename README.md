@@ -80,7 +80,7 @@ Check the makefile for available targets. I.e.:
 make TARGET=c64
 ```
 
-Resulting binaries can be found in the `out` directory.
+Resulting binaries can be found in the directory with the name of `$(TARGET)`.
 
 There is a shell script (`make-all.sh`) you can run to build for all available
 targets.

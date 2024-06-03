@@ -93,29 +93,28 @@ ALL_CFLAGS  := $(CFLAGS) --target $(TARGET) --include-dir $(CC65DIR)/include --a
 LD          := cl65
 LDFLAGS     := --target $(TARGET) --cfg-path $(CC65DIR)/cfg --lib-path $(CC65DIR)/lib
 
-srcdir       := src
-REPL_SOURCES := $(addprefix $(srcdir)/,repl.c)
-vpath %.c $(dir $(REPL_SOURCES))
-REPL_OBJECTS := $(notdir $(REPL_SOURCES:.c=.o))
+srcdir      := src
+REPL_SOURCE := $(srcdir)/baf-repl.c
+vpath %.c $(dir $(REPL_SOURCE))
+REPL_OBJECT := $(notdir $(REPL_SOURCE:.c=.o))
 
-outdir      ?= out
-REPL_BINARY := $(outdir)/$(TARGET)-repl.$(BINARY_FILE_EXTENSION)
+REPL_BINARY := $(TARGET)/baf-repl.$(BINARY_FILE_EXTENSION)
 
 .PHONY: all
 all: $(REPL_BINARY)
 
-$(REPL_BINARY): $(REPL_OBJECTS)
-	mkdir -p $(outdir)
+$(REPL_BINARY): $(REPL_OBJECT)
+	mkdir -p $(TARGET)
 	$(LD) $(LDFLAGS) -o $@ $^
 
 %.o: %.c
 	$(CC) $(ALL_CFLAGS) --create-dep $(@:.o=.d) -c -o $@ $<
--include $(REPL_OBJECTS:.o=.d)
+-include $(REPL_OBJECT:.o=.d)
 
 
 
 .PHONY: assembly
-assembly: $(REPL_OBJECTS:.o=.s)
+assembly: $(REPL_OBJECT:.o=.s)
 
 %.s: %.c
 	$(CC) $(ALL_CFLAGS) -S -o $@ $<
@@ -130,4 +129,4 @@ runREPL: $(REPL_BINARY)
 
 .PHONY: clean
 clean:
-	-rm -r $(outdir) *.o *.s *.d
+	-rm -r $(TARGET) *.o *.s *.d
