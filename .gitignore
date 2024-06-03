@@ -2,7 +2,13 @@
 *.o
 *.s
 *.prg
+c64/
+c128/
+pet/
+plus4/
+cx16/
+atari/
+atarixl/
 
-out/
 result*
 flake.lock
