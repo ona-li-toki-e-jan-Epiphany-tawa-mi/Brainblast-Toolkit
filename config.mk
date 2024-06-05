@@ -24,12 +24,12 @@ HISTORY_STACK_SIZE := 1028
 # The number of bytes to allocate for BASICfuck cell memory. Make this 30,000
 # cells maxiumum. If someone wants more they can always change it.
 C64_CELL_MEMORY_SIZE     := 30000
-C128_CELL_MEMORY_SIZE    := 27800
+C128_CELL_MEMORY_SIZE    := 28000
 PLUS4_CELL_MEMORY_SIZE   := 30000
-PET_CELL_MEMORY_SIZE     := 17000
-CX16_CELL_MEMORY_SIZE    := 24750
-ATARI_CELL_MEMORY_SIZE   := 25500
-ATARIXL_CELL_MEMORY_SIZE := 28000
+PET_CELL_MEMORY_SIZE     := 17500
+CX16_CELL_MEMORY_SIZE    := 25000
+ATARI_CELL_MEMORY_SIZE   := 25900
+ATARIXL_CELL_MEMORY_SIZE := 28300
 
 # Which file extension to use for generated binaries.
 C64_BINARY_FILE_EXTENSION     := prg
