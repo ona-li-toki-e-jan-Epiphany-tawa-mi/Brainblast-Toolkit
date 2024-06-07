@@ -1,4 +1,4 @@
-#!/usr/bin/env sh
+#!/bin/sh
 
 # This file is part of Brainblast-Toolkit.
 #
