@@ -168,9 +168,12 @@ static void display_bytecode() {
 int main(void) {
     uint8_t BASICfuck_memory[BASICFUCK_MEMORY_SIZE];
 
-    uint8_t  input_buffer[INPUT_BUFFER_SIZE];
-    uint8_t  history_stack[HISTORY_STACK_SIZE];
-    uint16_t history_stack_index = 0;
+    uint8_t input_buffer[INPUT_BUFFER_SIZE];
+    uint8_t history_stack[HISTORY_STACK_SIZE];
+    // Initalizes the history stack.
+    tb_history_stack       = history_stack;
+    tb_history_stack_size  = HISTORY_STACK_SIZE;
+    tb_history_stack_index = 0;
 
     // Initializes global screen size variables in screen.h.
     screensize(&s_width, &s_height);
@@ -201,7 +204,7 @@ int main(void) {
     while (true) {
         // Run.
         (void)fputs("YOUR WILL? ", stdout);
-        tb_edit_buffer(input_buffer, INPUT_BUFFER_SIZE - 1, history_stack, HISTORY_STACK_SIZE, &history_stack_index);
+        tb_edit_buffer(input_buffer, INPUT_BUFFER_SIZE - 1);
 
         switch (input_buffer[0]) {
         case NULL:

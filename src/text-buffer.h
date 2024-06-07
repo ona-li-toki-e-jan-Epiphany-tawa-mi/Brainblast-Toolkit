@@ -33,6 +33,13 @@
 
 
 
+#ifndef TEXT_BUFFER_DISABLE_HISTORY
+// History stack state.
+extern uint8_t* tb_history_stack;
+extern uint16_t tb_history_stack_size;
+extern uint16_t tb_history_stack_index;
+#endif // TEXT_BUFFER_DISABLE_HISTORY
+
 /**
  * Creates an editable text buffer, starting from the current position on the
  * screen, and stores what the user typed into the given buffer with a
@@ -43,16 +50,13 @@
  *
  * @param buffer - the buffer to store the typed characters into.
  * @param buffer_max_index - the maxiumum addressable index of the buffer.
- * @param history_stack - the stack to store previous user inputs in.
- * @param history_stack_size - the size of the history stack.
- * @param history_stack_index - a pointer to the current index into the history
- *        stack.
+ * @param tb_history_stack (global) - the stack to store previous user inputs
+ *                                    in.
+ * @param tb_history_stack_size (global) - the size of the history stack.
+ * @param tb_history_stack_index (global) - a pointer to the current index into
+ *                                          the stack history.
  */
-#ifndef TEXT_BUFFER_DISABLE_HISTORY
-void tb_edit_buffer(uint8_t *const buffer, uint8_t buffer_max_index, uint8_t *const history_stack, const uint16_t history_stack_size, uint16_t *const history_stack_index);
-#else // TEXT_BUFFER_DISABLE_HISTORY
 void tb_edit_buffer(uint8_t *const buffer, uint8_t buffer_max_index);
-#endif // #else
 
 
 
@@ -72,10 +76,10 @@ static uint8_t  tb_cursor;                        // The location of the user's 
 static uint8_t  tb_input_size;                    // How much of the buffer is taken up by the text typed by the user.
 
 #ifndef TEXT_BUFFER_DISABLE_HISTORY
-// Global variables for history stack to store and recall previous user inputs.
-static uint8_t*  tb_history_stack;
-static uint16_t  tb_history_stack_size;
-static uint16_t* tb_history_stack_index;
+// History stack state.
+uint8_t* tb_history_stack;
+uint16_t tb_history_stack_size;
+uint16_t tb_history_stack_index;
 
 /**
  * Increments the history stack index and loops it around if it goes out of
@@ -86,9 +90,9 @@ static uint16_t* tb_history_stack_index;
  * @param tb_history_stack_size (global) - the size of the history stack.
  */
 static void tb_increment_stack_index() {
-    ++(*tb_history_stack_index);
-    if (*tb_history_stack_index >= tb_history_stack_size)
-        *tb_history_stack_index = 0;
+    ++(tb_history_stack_index);
+    if (tb_history_stack_index >= tb_history_stack_size)
+        tb_history_stack_index = 0;
 }
 
 /**
@@ -100,10 +104,10 @@ static void tb_increment_stack_index() {
  * @param tb_history_stack_size (global) - the size of the history stack.
  */
 static void tb_decrement_stack_index() {
-    if (0 == *tb_history_stack_index) {
-        *tb_history_stack_index = tb_history_stack_size - 1;
+    if (0 == tb_history_stack_index) {
+        tb_history_stack_index = tb_history_stack_size - 1;
     } else {
-        --(*tb_history_stack_index);
+        --(tb_history_stack_index);
     }
 }
 
@@ -125,7 +129,7 @@ static void tb_save_buffer() {
 
     do {
         character = tb_buffer[buffer_index];
-        tb_history_stack[*tb_history_stack_index] = character;
+        tb_history_stack[tb_history_stack_index] = character;
 
         tb_increment_stack_index();
         ++buffer_index;
@@ -146,11 +150,11 @@ static void tb_save_buffer() {
  */
 static void tb_recall_buffer(const bool forward_recall) {
     uint8_t  character;
-    uint16_t final_history_index = *tb_history_stack_index;
+    uint16_t final_history_index = tb_history_stack_index;
 
     // Moves forwards or backwards to the next block in the history stack.
     if (forward_recall) {
-        while (NULL != tb_history_stack[*tb_history_stack_index])
+        while (NULL != tb_history_stack[tb_history_stack_index])
             tb_increment_stack_index();
         tb_increment_stack_index();
 
@@ -158,19 +162,19 @@ static void tb_recall_buffer(const bool forward_recall) {
         tb_decrement_stack_index();
         do {
             tb_decrement_stack_index();
-        } while (NULL != tb_history_stack[*tb_history_stack_index]);
+        } while (NULL != tb_history_stack[tb_history_stack_index]);
         tb_increment_stack_index();
     }
 
     // If a NULL is found at the next block, that means that it's at the end of
     // the history buffer.
-    if (NULL == tb_history_stack[*tb_history_stack_index]) {
-        *tb_history_stack_index = final_history_index;
+    if (NULL == tb_history_stack[tb_history_stack_index]) {
+        tb_history_stack_index = final_history_index;
         return;
     }
     // Preservers the index of this block as we will stay here in case of
     // succesive movements through the history.
-    final_history_index = *tb_history_stack_index;
+    final_history_index = tb_history_stack_index;
 
     // Navigates visual cursor to the end of the buffer.
     for (; tb_cursor < tb_input_size; ++tb_cursor)
@@ -183,7 +187,7 @@ static void tb_recall_buffer(const bool forward_recall) {
 
     // Reads from history buffer into buffer.
     while (true) {
-        character            = tb_history_stack[*tb_history_stack_index];
+        character            = tb_history_stack[tb_history_stack_index];
         tb_buffer[tb_cursor] = character;
         (void)putchar(character);
 
@@ -197,15 +201,11 @@ static void tb_recall_buffer(const bool forward_recall) {
 
     // Restores history stack index to the start of the current block so that
     // moving forwards and backwords works properly.
-    *tb_history_stack_index = final_history_index;
+    tb_history_stack_index = final_history_index;
 }
 #endif // TEXT_BUFFER_DISABLE_HISTORY
 
-#ifndef TEXT_BUFFER_DISABLE_HISTORY
-void tb_edit_buffer(uint8_t *const buffer, uint8_t buffer_max_index, uint8_t *const history_stack, const uint16_t history_stack_size, uint16_t *const history_stack_index) {
-#else // TEXT_BUFFER_DISABLE_HISTORY
 void tb_edit_buffer(uint8_t *const buffer, uint8_t buffer_max_index) {
-#endif // #else
     uint8_t new_cursor;
     uint8_t key;
 
@@ -213,16 +213,9 @@ void tb_edit_buffer(uint8_t *const buffer, uint8_t buffer_max_index) {
     buffer_max_index -= 1;
 
     // Loads parameters into global variables for this and other functions.
-    tb_buffer              = buffer;
-    tb_cursor              = 0;
-    tb_input_size          = 0;
-#ifndef TEXT_BUFFER_DISABLE_HISTORY
-    tb_history_stack       = history_stack;
-    tb_history_stack_size  = history_stack_size;
-    tb_history_stack_index = history_stack_index;
-#endif // TEXT_BUFFER_DISABLE_HISTORY
-
-
+    tb_buffer     = buffer;
+    tb_cursor     = 0;
+    tb_input_size = 0;
 
     while (true) {
         key = s_blinking_cgetc();
