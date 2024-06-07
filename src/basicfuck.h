@@ -529,17 +529,15 @@ void baf_interpret() {
 
     lopcode_jeq:
         if (baf_interpreter_bfmem[baf_interpreter_bfmem_index] == 0) {
-            // Since the program can only be 256 bytes long, we can ignore
-            // the high byte of the address.
-            program_index = argument;
+            program_index = (uint16_t)argument
+                          + ((uint16_t)baf_interpreter_program_memory[program_index+2] << 8);
         }
         goto lfinish_interpreter_cycle;
 
     lopcode_jne:
         if (baf_interpreter_bfmem[baf_interpreter_bfmem_index] != 0) {
-            // Since the program can only be 256 bytes long, we can ignore
-            // the high byte of the address.
-            program_index = argument;
+            program_index = (uint16_t)argument
+                          + ((uint16_t)baf_interpreter_program_memory[program_index+2] << 8);
         }
         goto lfinish_interpreter_cycle;
 
