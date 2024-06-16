@@ -89,7 +89,7 @@ for TARGET in $TARGETS; do
         BINARY_FILE_EXTENSION=$ATARIXL_BINARY_FILE_EXTENSION
         EMULATOR=$ATARIXL_EMULATOR
     else
-        echo "$0: Error: No build configuration for target $TARGET" 1>&2
+        echo "$0: Error: No build configuration for target '$TARGET'" 1>&2
         exit 1
     fi
 
@@ -122,6 +122,10 @@ for TARGET in $TARGETS; do
     elif [ clean = "$1" ]; then
         set -x
         rm -r "$OUT_DIRECTORY" *.o *.s
+
+    else
+        echo "$0: Error: Unknown build command '$1'" 1>&2
+        exit 1
     fi
 
 
