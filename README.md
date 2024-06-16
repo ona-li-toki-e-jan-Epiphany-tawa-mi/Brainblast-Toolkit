@@ -11,7 +11,7 @@ This rewrite includes the following benefits:
 - WAYYYYY FASTER!
 - Bytecode viewer (mainly just for debugging this, but it looks cool.)
 - WAYYYYY FASTER! (x2)
-- Support for a few 6502 machines, not just the Commodore 64 (see `Makefile` for supported systems.)
+- Support for a few 6502 machines, not just the Commodore 64 (see `build.sh` for supported systems.)
 
 ## BASICfuck
 
@@ -69,29 +69,30 @@ ENTER/RETURN:
 You will need make and the cc65 toolchain (https://cc65.github.io). There is a
 `flake.nix` you can use with `nix develop path:.` to get them.
 
-There are configuration options you can change in `config.mk`, mainly for memory
+There are configuration options you can change in `config.sh`, mainly for memory
 sizes.
 
-To build for a paticular system, you will need to specify the TARGET variable
-on the command line to make. By default it will build for the Commodore 64.
-Check the makefile for available targets. I.e.:
+To build for paticular systems, you will need to specify the TARGETS variable on
+the command line to make. By default it will build for the Commodore 64. Check
+`build.sh` for available targets. I.e.:
 
 ```
-make TARGET=c64
+TARGETS=c64 ./build.sh
 ```
 
-Resulting binaries can be found in the directory with the name of `$(TARGET)`.
+Resulting binaries can be found in the directory with the name of the build
+target.
 
-There is a shell script (`make-all.sh`) you can run to build for all available
-targets.
+Passing multiple targets in a space-separated list with TARGETS will cause the
+build commands to be run for each target one-by-one.
 
-There are also emulator commands set up to be invoked with the makefile with
-runREPL. The emulator needed will depend on the target system. Check the
-makefile for the required emulators (if you used `nix develop path:.`, they are already
-included.) You may need to specify TARGET as well, like before:
+There are also emulator commands set up to be invoked with `build.sh` with
+`run`. The emulator needed will depend on the target system. Check `build.sh`
+for the required emulators (if you used `nix develop path:.`, they are already
+included.) You may need to specify TARGETS as well, like before:
 
 ```
-make runREPL TARGET=c64
+TARGETS=c64 ./build.sh run
 ```
 
 You can also grab precompiled binaries off of my Hydra instance at one of the

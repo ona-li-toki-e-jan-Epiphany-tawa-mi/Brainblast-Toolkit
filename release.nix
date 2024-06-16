@@ -34,13 +34,13 @@ let pkgs = import nixpkgs {};
         src = ./.;
 
         nativeBuildInputs = with pkgs; [ cc65 ];
-        makeFlags         = [ "TARGET=${target}" ];
 
-        # We don't need to do anything here but nix whines about not having an
-        # install target in the makefile without this.
-        installPhase = ''
-          runHook preInstall
-          runHook postInstall
+        buildPhase = ''
+          runHook preBuild
+
+          TARGETS="${target}" ./build.sh
+
+          runHook postBuild
         '';
 
         doDist    = true;
