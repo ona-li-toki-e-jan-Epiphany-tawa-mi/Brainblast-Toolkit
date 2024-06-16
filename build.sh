@@ -121,7 +121,7 @@ for TARGET in $TARGETS; do
 
     elif [ clean = "$1" ]; then
         set -x
-        rm -r "$OUT_DIRECTORY" *.o *.s
+        rm -r "$OUT_DIRECTORY" "$SOURCE_DIRECTORY"/*.o *.s
 
     else
         echo "$0: Error: Unknown build command '$1'" 1>&2
