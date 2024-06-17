@@ -132,6 +132,8 @@ static baf_opcode_t program_memory[PROGRAM_MEMORY_SIZE];
  * @param program (global) - the program buffer.
  */
 static void display_machine_code() {
+    // To make the code smaller and faster, rather than accessing the buffer via
+    // index (i.e. buffer[index],) we just directly move a pointer instead.
     const baf_opcode_t* program_address = program_memory;
 
     uint8_t i = 0;

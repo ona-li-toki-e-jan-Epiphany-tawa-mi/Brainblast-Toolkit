@@ -35,24 +35,29 @@
 typedef uint8_t baf_cell_t;
 
 typedef uint8_t baf_opcode_t;
-#define BAF_RTS           0x60
-#define BAF_INC_ABSOLUTE  0xEE
-#define BAF_JSR           0x20
-#define BAF_LDA_ABSOLUTE  0xAD
-#define BAF_LDA_IMMEDIATE 0xA9
-#define BAF_STA_ABSOLUTE  0x8D
-#define BAF_LDX_IMMEDIATE 0xA2
-#define BAF_DEX           0xCA
-#define BAF_ADC_ABSOLUTE  0x6D
-#define BAF_BNE           0xD0
-#define BAF_DEC_ABSOLUTE  0xCE
-#define BAF_BVC           0x50
-#define BAF_BVC           0x50
-#define BAF_BCS           0xB0
-#define BAF_CLC           0x18
-#define BAF_BCC           0x90
-#define BAF_SBC_IMMEDIATE 0xE9
-#define BAF_SEC           0x38
+#define BAF_ADC_ABSOLUTE   0x6D
+#define BAF_ADC_IMMEDIATE  0x69
+#define BAF_BCC            0x90
+#define BAF_BCS            0xB0
+#define BAF_BNE            0xD0
+#define BAF_BVC            0x50
+#define BAF_BVC            0x50
+#define BAF_CLC            0x18
+#define BAF_DEC_ABSOLUTE   0xCE
+#define BAF_DEX            0xCA
+#define BAF_INC_ABSOLUTE   0xEE
+#define BAF_JSR            0x20
+#define BAF_LDA_ABSOLUTE   0xAD
+#define BAF_LDA_IMMEDIATE  0xA9
+#define BAF_LDA_INDIRECT_Y 0xB1
+#define BAF_LDX_IMMEDIATE  0xA2
+#define BAF_LDY_IMMEDIATE  0xA0
+#define BAF_RTS            0x60
+#define BAF_SBC_IMMEDIATE  0xE9
+#define BAF_SEC            0x38
+#define BAF_STA_ABSOLUTE   0x8D
+#define BAF_STA_INDIRECT_Y 0x91
+#define BAF_STA_ZEROPAGE   0x85
 
 // BASICfuck state.
 extern baf_cell_t* baf_bfmem;
@@ -113,19 +118,48 @@ uint16_t       baf_write_buffer_size;
  * @return true if succeeded, false if ran out of memory.
  */
 static bool baf_compile_first_pass() {
-    uint8_t instruction;
+    uint8_t instruction = 0;
     // Used to count the number of times an instruction occurs.
-    uint8_t operand;
+    uint8_t operand = 0;
     // Used to figure out addressing for self-modifying code.
-    baf_opcode_t* address;
+    baf_opcode_t* address = NULL;
 
+    // To make the code smaller and faster, rather than accessing the buffer via
+    // index (i.e. buffer[index],) we just directly move a pointer instead.
     const uint8_t* read_address  = baf_read_buffer;
     baf_opcode_t*  write_address = baf_write_buffer;
 
-#define BAF_PUSH_TYPE(type, value)              \
+    // The first pointer register allocated by cc65. Used for indirect
+    // addressing. Zero page address.
+    uint8_t pointer1 = NULL;
+    // We can't access assembly variables directly from C, so instead we use a
+    // little inline assembly to copy it to a C variable.
+    __asm__ ("lda    #ptr1  "          );
+    __asm__ ("sta    %v     ", pointer1);
+    __asm__ ("lda    #ptr1+1"          );
+    __asm__ ("sta    %v+1   ", pointer1);
+
+    /**
+     * Pushes data to the write buffer.
+     * @param type - the type of the data.
+     * @param value - the data.
+     */
+#define BAF_PUSH(type, value)                   \
     {                                           \
         *((type*)write_address) = (value);      \
         write_address += sizeof(type);          \
+    }
+
+    /**
+     * Computes the operand of counted instructions.
+     */
+#define COMPUTE_OPERAND                         \
+    {                                           \
+        operand = 1;                            \
+        while (instruction == *read_address) {  \
+            ++operand;                          \
+            ++read_address;                     \
+        }                                       \
     }
 
     while (true) {
@@ -137,113 +171,105 @@ static bool baf_compile_first_pass() {
             // Effectively: return
 
             //    rts
-            BAF_PUSH_TYPE(baf_opcode_t, BAF_RTS);
+            BAF_PUSH(baf_opcode_t, BAF_RTS);
         } goto lend_first_pass;
 
             // Increments/decrements the current cell.
         case '+':
         case '-': {
-            operand = 1;
-            while (instruction == *(read_address)) {
-                ++operand;
-                ++read_address;
-            }
-
-            // Effectively: *baf_bfmem += operand OR *baf_bfmem -= operand
+            COMPUTE_OPERAND;
             // To perform decrements we add the two's complement of the operand
             // to subtract, which is effectively subtraction.
+            if ('-' == instruction) operand = -operand;
 
-            // TODO: make work correctly.
-            //    lda baf_bfmem
-            BAF_PUSH_TYPE(baf_opcode_t, BAF_LDA_ABSOLUTE);
-            BAF_PUSH_TYPE(baf_cell_t*, baf_bfmem);
-            //    sta lset_address1+1
-            address = 1 + 17 + write_address;
-            BAF_PUSH_TYPE(baf_opcode_t, BAF_STA_ABSOLUTE);
-            BAF_PUSH_TYPE(baf_opcode_t*, address);
-            //    sta lset_address2+1
-            address = 1 + 17 + write_address;
-            BAF_PUSH_TYPE(baf_opcode_t, BAF_STA_ABSOLUTE);
-            BAF_PUSH_TYPE(baf_opcode_t*, address);
-            //    lda baf_bfmem+1
-            BAF_PUSH_TYPE(baf_opcode_t, BAF_LDA_ABSOLUTE);
-            BAF_PUSH_TYPE(baf_cell_t*, 1 + baf_bfmem);
-            //    sta lset_address1+2
-            address = 2 + 8 + write_address;
-            BAF_PUSH_TYPE(baf_opcode_t, BAF_STA_ABSOLUTE);
-            BAF_PUSH_TYPE(baf_opcode_t*, address);
-            //    sta lset_address2+2
-            address = 2 + 8 + write_address;
-            BAF_PUSH_TYPE(baf_opcode_t, BAF_STA_ABSOLUTE);
-            BAF_PUSH_TYPE(baf_opcode_t*, address);
-            //    lda, #(operand|-operand)
-            BAF_PUSH_TYPE(baf_opcode_t, BAF_LDA_IMMEDIATE);
-            BAF_PUSH_TYPE(baf_opcode_t, '+' == instruction ? operand : -operand);
-            // lset_address1:
-            //    adc <address>
-            BAF_PUSH_TYPE(baf_opcode_t, BAF_ADC_ABSOLUTE);
-            BAF_PUSH_TYPE(baf_opcode_t*, NULL);
-            // lset_address2:
-            //    sta <address>
-            BAF_PUSH_TYPE(baf_opcode_t, BAF_STA_ABSOLUTE);
-            BAF_PUSH_TYPE(baf_opcode_t*, NULL);
+            // Effectively: *baf_bfmem += operand OR *baf_bfmem -= operand
+
+            // lda     #<(_BASICfuck_memory)
+            // ldx     #>(_BASICfuck_memory)
+            // sta     ptr1
+            // stx     ptr1+1
+            // ldy     #$00
+            // lda     (ptr1),y
+            // clc
+            // adc     #$07
+            // sta     (ptr1),y
+
+            // TODO: make work.
+            // lda    baf_bfmem
+            BAF_PUSH(baf_opcode_t, BAF_LDA_ABSOLUTE);
+            BAF_PUSH(baf_cell_t*, baf_bfmem);
+            // sta    pointer1
+            BAF_PUSH(baf_opcode_t, BAF_STA_ZEROPAGE);
+            BAF_PUSH(uint8_t,      pointer1);
+            // lda    baf_bfmem+1
+            BAF_PUSH(baf_opcode_t, BAF_LDA_ABSOLUTE);
+            BAF_PUSH(baf_cell_t*, 1+baf_bfmem);
+            // sta    pointer1+1
+            BAF_PUSH(baf_opcode_t, BAF_STA_ZEROPAGE);
+            BAF_PUSH(uint8_t,      1+pointer1);
+            // ldy    #$00
+            BAF_PUSH(baf_opcode_t, BAF_LDY_IMMEDIATE);
+            BAF_PUSH(uint8_t, 0);
+            // lda    (pointer1),y
+            BAF_PUSH(baf_opcode_t, BAF_LDA_INDIRECT_Y);
+            BAF_PUSH(uint8_t,      pointer1);
+            // clc
+            BAF_PUSH(baf_opcode_t, BAF_CLC);
+            // adc    #operand
+            BAF_PUSH(baf_opcode_t, BAF_ADC_IMMEDIATE);
+            BAF_PUSH(uint8_t, operand);
+            // sta    (pointer1),y
+            BAF_PUSH(baf_opcode_t, BAF_STA_INDIRECT_Y);
+            BAF_PUSH(uint8_t,      pointer1);
         } continue;
 
         case '<': {
-            operand = 1;
-            while (instruction == *(read_address)) {
-                ++operand;
-                ++read_address;
-            }
+            COMPUTE_OPERAND;
 
             // Effectively: baf_bfmem -= operand
 
-            //   lda baf_bfmem
-            BAF_PUSH_TYPE(baf_opcode_t, BAF_LDA_ABSOLUTE);
-            BAF_PUSH_TYPE(baf_cell_t**, &baf_bfmem);
-            //   sec
-            BAF_PUSH_TYPE(baf_opcode_t, BAF_SEC);
-            //   sbc #operand
-            BAF_PUSH_TYPE(baf_opcode_t, BAF_SBC_IMMEDIATE);
-            BAF_PUSH_TYPE(uint8_t,      operand);
-            //   sta baf_bfmem
-            BAF_PUSH_TYPE(baf_opcode_t, BAF_STA_ABSOLUTE);
-            BAF_PUSH_TYPE(baf_cell_t**, &baf_bfmem);
-            //   bcs lno_borrow
-            BAF_PUSH_TYPE(baf_opcode_t, BAF_BCS);
-            BAF_PUSH_TYPE(uint8_t,      3);
-            //   dec baf_bfmem+1
-            BAF_PUSH_TYPE(baf_opcode_t, BAF_DEC_ABSOLUTE);
-            BAF_PUSH_TYPE(baf_cell_t**, (baf_cell_t**)(1 + (uint16_t)&baf_bfmem));
+            //    lda    baf_bfmem
+            BAF_PUSH(baf_opcode_t, BAF_LDA_ABSOLUTE);
+            BAF_PUSH(baf_cell_t**, &baf_bfmem);
+            //    sec
+            BAF_PUSH(baf_opcode_t, BAF_SEC);
+            //    sbc    #operand
+            BAF_PUSH(baf_opcode_t, BAF_SBC_IMMEDIATE);
+            BAF_PUSH(uint8_t,      operand);
+            //    sta    baf_bfmem
+            BAF_PUSH(baf_opcode_t, BAF_STA_ABSOLUTE);
+            BAF_PUSH(baf_cell_t**, &baf_bfmem);
+            //    bcs    lno_borrow
+            BAF_PUSH(baf_opcode_t, BAF_BCS);
+            BAF_PUSH(uint8_t,      3);
+            //    dec    baf_bfmem+1
+            BAF_PUSH(baf_opcode_t, BAF_DEC_ABSOLUTE);
+            BAF_PUSH(baf_cell_t**, (baf_cell_t**)(1 + (uint16_t)&baf_bfmem));
             // lno_borrow:
         } continue;
 
         case '>': {
-            operand = 1;
-            while (instruction == *(read_address)) {
-                ++operand;
-                ++read_address;
-            }
+            COMPUTE_OPERAND;
 
             // Effectively: baf_bfmem += operand
 
-            //    lda #operand
-            BAF_PUSH_TYPE(baf_opcode_t, BAF_LDA_IMMEDIATE);
-            BAF_PUSH_TYPE(uint8_t,      operand);
+            //    lda    #operand
+            BAF_PUSH(baf_opcode_t, BAF_LDA_IMMEDIATE);
+            BAF_PUSH(uint8_t,      operand);
             //    clc
-            BAF_PUSH_TYPE(baf_opcode_t, BAF_CLC);
-            //    adc baf_bfmem
-            BAF_PUSH_TYPE(baf_opcode_t, BAF_ADC_ABSOLUTE);
-            BAF_PUSH_TYPE(baf_cell_t**, &baf_bfmem);
-            //    sta baf_bfmem
-            BAF_PUSH_TYPE(baf_opcode_t, BAF_STA_ABSOLUTE);
-            BAF_PUSH_TYPE(baf_cell_t**, &baf_bfmem);
-            //    bcc lno_carry
-            BAF_PUSH_TYPE(baf_opcode_t, BAF_BCC);
-            BAF_PUSH_TYPE(uint8_t,      3);
-            //    inc baf_bfmem+1
-            BAF_PUSH_TYPE(baf_opcode_t, BAF_INC_ABSOLUTE);
-            BAF_PUSH_TYPE(baf_cell_t**, (baf_cell_t**)(1 + (uint16_t)&baf_bfmem));
+            BAF_PUSH(baf_opcode_t, BAF_CLC);
+            //    adc    baf_bfmem
+            BAF_PUSH(baf_opcode_t, BAF_ADC_ABSOLUTE);
+            BAF_PUSH(baf_cell_t**, &baf_bfmem);
+            //    sta    baf_bfmem
+            BAF_PUSH(baf_opcode_t, BAF_STA_ABSOLUTE);
+            BAF_PUSH(baf_cell_t**, &baf_bfmem);
+            //    bcc    lno_carry
+            BAF_PUSH(baf_opcode_t, BAF_BCC);
+            BAF_PUSH(uint8_t,      3);
+            //    inc    baf_bfmem+1
+            BAF_PUSH(baf_opcode_t, BAF_INC_ABSOLUTE);
+            BAF_PUSH(baf_cell_t**, (baf_cell_t**)(1 + (uint16_t)&baf_bfmem));
             // lno_carry:
         } continue;
 
@@ -252,9 +278,58 @@ static bool baf_compile_first_pass() {
         case '[':
         case ']':
         case '@':
-        case '*':
-        case '(':
-        case ')':
+        case '*': assert(false && "TODO");
+
+        case '(': {
+            COMPUTE_OPERAND;
+
+            // Effectively: baf_cmem_pointer -= operand
+
+            //    lda    baf_cmem_pointer
+            BAF_PUSH(baf_opcode_t, BAF_LDA_ABSOLUTE);
+            BAF_PUSH(uint8_t**,    &baf_cmem_pointer);
+            //    sec
+            BAF_PUSH(baf_opcode_t, BAF_SEC);
+            //    sbc    #operand
+            BAF_PUSH(baf_opcode_t, BAF_SBC_IMMEDIATE);
+            BAF_PUSH(uint8_t,      operand);
+            //    sta    baf_cmem_pointer
+            BAF_PUSH(baf_opcode_t, BAF_STA_ABSOLUTE);
+            BAF_PUSH(uint8_t**,    &baf_cmem_pointer);
+            //    bcs    lno_borrow
+            BAF_PUSH(baf_opcode_t, BAF_BCS);
+            BAF_PUSH(uint8_t,      3);
+            //    dec    baf_cmem_pointer+1
+            BAF_PUSH(baf_opcode_t, BAF_DEC_ABSOLUTE);
+            BAF_PUSH(uint8_t**,    (uint8_t**)(1 + (uint16_t)&baf_cmem_pointer));
+            // lno_borrow:
+        } continue;
+
+        case ')': {
+            COMPUTE_OPERAND;
+
+            // Effectively: baf_cmem_pointer += operand
+
+            //    lda    #operand
+            BAF_PUSH(baf_opcode_t, BAF_LDA_IMMEDIATE);
+            BAF_PUSH(uint8_t,      operand);
+            //    clc
+            BAF_PUSH(baf_opcode_t, BAF_CLC);
+            //    adc    baf_cmem_pointer
+            BAF_PUSH(baf_opcode_t, BAF_ADC_ABSOLUTE);
+            BAF_PUSH(uint8_t**,    &baf_cmem_pointer);
+            //    sta    baf_cmem_pointer
+            BAF_PUSH(baf_opcode_t, BAF_STA_ABSOLUTE);
+            BAF_PUSH(uint8_t**,    &baf_cmem_pointer);
+            //    bcc    lno_carry
+            BAF_PUSH(baf_opcode_t, BAF_BCC);
+            BAF_PUSH(uint8_t,      3);
+            //    inc    baf_cmem_pointer+1
+            BAF_PUSH(baf_opcode_t, BAF_INC_ABSOLUTE);
+            BAF_PUSH(uint8_t**,    (uint8_t**)(1 + (uint16_t)&baf_cmem_pointer));
+            // lno_carry:
+        } continue;
+
         case '%': assert(false && "TODO");
 
             // Ignores non-instructions.
@@ -329,9 +404,10 @@ static bool baf_compile_first_pass() {
 
     return true;
 
-    // We undefine this macro since they only make sense within the context of
+    // We undefine these macros since they only make sense within the context of
     // this function.
-#undef BAF_PUSH_TYPE
+#undef BAF_PUSH
+#undef COMPUTE_OPERAND
 }
 
 /**
