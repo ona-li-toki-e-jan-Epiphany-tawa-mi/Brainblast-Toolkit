@@ -34,7 +34,7 @@
 
 #include "keyboard.h"
 #define SCREEN_IMPLEMENTATION
-#define S_BUFFER_SIZE 6U
+#define SCREEN_BUFFER_SIZE 6U
 #include "screen.h"
 #define TEXT_BUFFER_IMPLEMENTATION
 #include "text-buffer.h"
