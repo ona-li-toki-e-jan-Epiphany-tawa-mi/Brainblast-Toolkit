@@ -74,7 +74,7 @@ static void help_menu() {
                "\n"
                "! - Exits REPL.\n"
                "? - Displays this help menu.\n"
-               "# - Displays bytecode of last program.\n"
+               "# - Displays machine code of last program.\n"
                "\n"
                "REPL Controls (Keypress):\n"
                "\n"
@@ -163,13 +163,15 @@ static void display_machine_code() {
     (void)putchar('\n');
 }
 
+
+
+baf_cell_t BASICfuck_memory[BASICFUCK_MEMORY_SIZE];
+
 #define INPUT_BUFFER_SIZE 256U
+uint8_t input_buffer[INPUT_BUFFER_SIZE];
+uint8_t history_stack[HISTORY_STACK_SIZE];
 
 int main(void) {
-    uint8_t BASICfuck_memory[BASICFUCK_MEMORY_SIZE];
-    uint8_t input_buffer[INPUT_BUFFER_SIZE];
-    uint8_t history_stack[HISTORY_STACK_SIZE];
-
     // Initalizes the history stack.
     tb_history_stack       = history_stack;
     tb_history_stack_size  = HISTORY_STACK_SIZE;

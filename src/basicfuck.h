@@ -32,6 +32,8 @@
 
 
 
+typedef uint8_t baf_cell_t;
+
 typedef uint8_t baf_opcode_t;
 #define BAF_RTS           0x60
 #define BAF_INC_ABSOLUTE  0xEE
@@ -53,8 +55,8 @@ typedef uint8_t baf_opcode_t;
 #define BAF_SEC           0x38
 
 // BASICfuck state.
-extern uint8_t* baf_bfmem;
-extern uint8_t* baf_cmem_pointer;
+extern baf_cell_t* baf_bfmem;
+extern uint8_t*    baf_cmem_pointer;
 
 // Compiler state.
 extern const uint8_t* baf_read_buffer;
@@ -92,8 +94,8 @@ BAFCompileResult baf_compile();
 #include <assert.h>
 
 // BASICfuck state.
-uint8_t* baf_bfmem;
-uint8_t* baf_cmem_pointer;
+baf_cell_t* baf_bfmem;
+uint8_t*    baf_cmem_pointer;
 
 // Compiler state.
 const uint8_t* baf_read_buffer;
@@ -149,7 +151,7 @@ static bool baf_compile_first_pass() {
             // TODO: make work correctly.
             //    lda baf_bfmem
             BAF_PUSH_TYPE(baf_opcode_t, BAF_LDA_ABSOLUTE);
-            BAF_PUSH_TYPE(uint8_t*, baf_bfmem);
+            BAF_PUSH_TYPE(baf_cell_t*, baf_bfmem);
             //    sta lset_address1+1
             address = 1 + 17 + write_address;
             BAF_PUSH_TYPE(baf_opcode_t, BAF_STA_ABSOLUTE);
@@ -160,7 +162,7 @@ static bool baf_compile_first_pass() {
             BAF_PUSH_TYPE(baf_opcode_t*, address);
             //    lda baf_bfmem+1
             BAF_PUSH_TYPE(baf_opcode_t, BAF_LDA_ABSOLUTE);
-            BAF_PUSH_TYPE(uint8_t*, 1 + baf_bfmem);
+            BAF_PUSH_TYPE(baf_cell_t*, 1 + baf_bfmem);
             //    sta lset_address1+2
             address = 2 + 8 + write_address;
             BAF_PUSH_TYPE(baf_opcode_t, BAF_STA_ABSOLUTE);
@@ -196,20 +198,19 @@ static bool baf_compile_first_pass() {
             BAF_PUSH_TYPE(baf_opcode_t, BAF_CLC);
             //    adc baf_bfmem
             BAF_PUSH_TYPE(baf_opcode_t, BAF_ADC_ABSOLUTE);
-            BAF_PUSH_TYPE(uint8_t**,    &baf_bfmem);
+            BAF_PUSH_TYPE(baf_cell_t**, &baf_bfmem);
             //    sta baf_bfmem
             BAF_PUSH_TYPE(baf_opcode_t, BAF_STA_ABSOLUTE);
-            BAF_PUSH_TYPE(uint8_t**,    &baf_bfmem);
+            BAF_PUSH_TYPE(baf_cell_t**, &baf_bfmem);
             //    bcc lno_carry
             BAF_PUSH_TYPE(baf_opcode_t, BAF_BCC);
             BAF_PUSH_TYPE(uint8_t,      3);
             //    inc baf_bfmem+1
             BAF_PUSH_TYPE(baf_opcode_t, BAF_INC_ABSOLUTE);
-            BAF_PUSH_TYPE(uint8_t**,    (uint8_t**)(1 + (uint16_t)&baf_bfmem));
+            BAF_PUSH_TYPE(baf_cell_t**, (baf_cell_t**)(1 + (uint16_t)&baf_bfmem));
             // lno_carry:
         } continue;
 
-        case '<':
         case '.':
         case ',':
         case '[':
