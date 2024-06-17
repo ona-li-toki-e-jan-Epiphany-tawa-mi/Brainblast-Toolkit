@@ -165,11 +165,11 @@ static void display_machine_code() {
 
 
 
-baf_cell_t BASICfuck_memory[BASICFUCK_MEMORY_SIZE];
+static baf_cell_t BASICfuck_memory[BASICFUCK_MEMORY_SIZE];
 
 #define INPUT_BUFFER_SIZE 256U
-uint8_t input_buffer[INPUT_BUFFER_SIZE];
-uint8_t history_stack[HISTORY_STACK_SIZE];
+static uint8_t input_buffer[INPUT_BUFFER_SIZE];
+static uint8_t history_stack[HISTORY_STACK_SIZE];
 
 int main(void) {
     // Initalizes the history stack.

@@ -51,7 +51,7 @@ typedef uint8_t baf_opcode_t;
 #define BAF_BCS           0xB0
 #define BAF_CLC           0x18
 #define BAF_BCC           0x90
-#define BAF_SBC_ABSOLUTE  0xED
+#define BAF_SBC_IMMEDIATE 0xE9
 #define BAF_SEC           0x38
 
 // BASICfuck state.
@@ -102,6 +102,7 @@ const uint8_t* baf_read_buffer;
 baf_opcode_t*  baf_write_buffer;
 uint16_t       baf_write_buffer_size;
 
+// TODO add bounds checking.
 /**
  * Performs the first pass of BASICfuck compilation, converting the text program
  * to machine code.
@@ -133,7 +134,7 @@ static bool baf_compile_first_pass() {
         switch (instruction) {
             // The null-terminator marks the end of the program.
         case '\0': {
-            //if (baf_write_buffer_size >= baf_write_index) return false;
+            // Effectively: return
 
             //    rts
             BAF_PUSH_TYPE(baf_opcode_t, BAF_RTS);
@@ -147,6 +148,10 @@ static bool baf_compile_first_pass() {
                 ++operand;
                 ++read_address;
             }
+
+            // Effectively: *baf_bfmem += operand OR *baf_bfmem -= operand
+            // To perform decrements we add the two's complement of the operand
+            // to subtract, which is effectively subtraction.
 
             // TODO: make work correctly.
             //    lda baf_bfmem
@@ -184,12 +189,43 @@ static bool baf_compile_first_pass() {
             BAF_PUSH_TYPE(baf_opcode_t*, NULL);
         } continue;
 
+        case '<': {
+            operand = 1;
+            while (instruction == *(read_address)) {
+                ++operand;
+                ++read_address;
+            }
+
+            // Effectively: baf_bfmem -= operand
+
+            //   lda baf_bfmem
+            BAF_PUSH_TYPE(baf_opcode_t, BAF_LDA_ABSOLUTE);
+            BAF_PUSH_TYPE(baf_cell_t**, &baf_bfmem);
+            //   sec
+            BAF_PUSH_TYPE(baf_opcode_t, BAF_SEC);
+            //   sbc #operand
+            BAF_PUSH_TYPE(baf_opcode_t, BAF_SBC_IMMEDIATE);
+            BAF_PUSH_TYPE(uint8_t,      operand);
+            //   sta baf_bfmem
+            BAF_PUSH_TYPE(baf_opcode_t, BAF_STA_ABSOLUTE);
+            BAF_PUSH_TYPE(baf_cell_t**, &baf_bfmem);
+            //   bcs lno_borrow
+            BAF_PUSH_TYPE(baf_opcode_t, BAF_BCS);
+            BAF_PUSH_TYPE(uint8_t,      3);
+            //   dec baf_bfmem+1
+            BAF_PUSH_TYPE(baf_opcode_t, BAF_DEC_ABSOLUTE);
+            BAF_PUSH_TYPE(baf_cell_t**, (baf_cell_t**)(1 + (uint16_t)&baf_bfmem));
+            // lno_borrow:
+        } continue;
+
         case '>': {
             operand = 1;
             while (instruction == *(read_address)) {
                 ++operand;
                 ++read_address;
             }
+
+            // Effectively: baf_bfmem += operand
 
             //    lda #operand
             BAF_PUSH_TYPE(baf_opcode_t, BAF_LDA_IMMEDIATE);
