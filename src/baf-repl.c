@@ -123,15 +123,17 @@ static void help_menu() {
 
 // Memory for the compiled bytecode of entered BASICfuck code.
 #define PROGRAM_MEMORY_SIZE 256U
-static baf_opcode_t program_memory[PROGRAM_MEMORY_SIZE];
+static baf_machine_code_t program_memory[PROGRAM_MEMORY_SIZE];
 
 /**
- * Displays a readout of the bytecode of the last program to the user. Holding
- * space will slow down the printing.
+ * Displays a readout of the machine code of the last program to the user.
+ * Holding space will slow down the printing.
  *
  * @param program (global) - the program buffer.
  */
-static void display_bytecode() {
+static void display_machine_code() {
+    const baf_machine_code_t* program_address = program_memory;
+
     uint8_t i = 0;
 
     // Ideally display 16 bytes at a time, but screen real estate is what it is.
@@ -146,12 +148,12 @@ static void display_bytecode() {
 
             // Prints addresses.
             (void)fputs("\n$", stdout);
-            s_utoa_fputs(4, i, 16);
+            s_utoa_fputs(4, (int)program_address, 16);
             (void)putchar(':');
         }
         // Prints values.
         (void)putchar(' ');
-        s_utoa_fputs(2, program_memory[i], 16);
+        s_utoa_fputs(2, *(program_address++), 16);
 
         if (i >= PROGRAM_MEMORY_SIZE - 1)
             break;
@@ -161,7 +163,19 @@ static void display_bytecode() {
     (void)putchar('\n');
 }
 
+void execute_program() {
+    __asm__ volatile ("lda     %v",   program_memory);
+    __asm__ volatile ("sta     %g+1", ljump_instruction);
+    __asm__ volatile ("lda     %v+1", program_memory);
+    __asm__ volatile ("sta     %g+2", ljump_instruction);
+ ljump_instruction:
+    __asm__ volatile ("jsr     %w",   NULL);
 
+    return;
+    // If we don't include a jmp instruction, cc65, annoyingly, strips the label
+    // from the resulting assembly.
+    __asm__ volatile ("jmp     %g", ljump_instruction);
+}
 
 #define INPUT_BUFFER_SIZE 256U
 
@@ -177,21 +191,13 @@ int main(void) {
 
     // Initializes global screen size variables in screen.h.
     screensize(&s_width, &s_height);
-    // Initializes the opcode table in basicfuck.h.
-    baf_initialize_instruction_opcode_table();
 
     // Initalizes the compiler.
-    baf_compiler_read_buffer       = input_buffer;
-    baf_compiler_write_buffer      = program_memory;
-    baf_compiler_write_buffer_size = PROGRAM_MEMORY_SIZE;
-
-    // Initializes the interpreter.
-    baf_interpreter_program_memory = program_memory;
-    baf_interpreter_bfmem          = BASICfuck_memory;
-    baf_interpreter_bfmem_size     = BASICFUCK_MEMORY_SIZE;
-    baf_interpreter_bfmem_index    = 0;
-    baf_interpreter_cmem_pointer   = 0;
-
+    baf_bfmem             = BASICfuck_memory;
+    baf_cmem_pointer      = 0;
+    baf_read_buffer       = input_buffer;
+    baf_write_buffer      = program_memory;
+    baf_write_buffer_size = PROGRAM_MEMORY_SIZE;
 
     clrscr();
     (void)puts("Brainblast-Toolkit BASICfuck REPL " TOOLKIT_VERSION "\n");
@@ -202,12 +208,12 @@ int main(void) {
                "Enter '!' to EXIT\n");
 
     while (true) {
-        // Run.
+        // Read.
         (void)fputs("YOUR WILL? ", stdout);
         tb_edit_buffer(input_buffer, INPUT_BUFFER_SIZE - 1);
 
         switch (input_buffer[0]) {
-        case NULL:
+        case '\0':
             continue;                             // empty input.
 
         case '!':
@@ -219,32 +225,37 @@ int main(void) {
             continue;
 
         case '#':
-            display_bytecode();
+            display_machine_code();
             continue;
         }
 
         // Evaluate.
         switch (baf_compile()) {
-        case BAF_COMPILE_OUT_OF_MEMORY:
+        case BAF_COMPILE_OUT_OF_MEMORY: {
             (void)puts("?OUT OF MEMORY");
-            continue;
-        case BAF_COMPILE_UNTERMINATED_LOOP:
+        } continue;
+        case BAF_COMPILE_UNTERMINATED_LOOP: {
             (void)puts("?UNTERMINATED LOOP");
-            continue;
-        case BAF_COMPILE_SUCCESS:
-            break;
-        default:
-            assert(false && "Unexpected bytecode compilation result");
+        } continue;
+        case BAF_COMPILE_SUCCESS: break;
+        default: assert(false && "Unexpected bytecode compilation result");
         }
 
-        baf_interpret();
+        s_utoa_fputs(2, *(uint8_t*)NULL, 16);
+        putchar('\n');
+        //goto lskip;
+        //execute_program();
+        __asm__ ("jsr    %v", program_memory);
+        //lskip:
+        s_utoa_fputs(2, *(uint8_t*)NULL, 16);
+        putchar('\n');
 
-        // Prints cell value.
-        s_utoa_fputs(3, baf_interpreter_bfmem[baf_interpreter_bfmem_index], 10);
+        // Print.
+        s_utoa_fputs(3, *baf_bfmem, 10);
         (void)fputs(" (Cell ", stdout);
-        s_utoa_fputs(5, baf_interpreter_bfmem_index, 10);
+        s_utoa_fputs(5, (int)(baf_bfmem - BASICfuck_memory), 10);
         (void)fputs(", Memory $", stdout);
-        s_utoa_fputs(4, (uint16_t)baf_interpreter_cmem_pointer, 16);
+        s_utoa_fputs(4, (int)baf_cmem_pointer, 16);
         (void)puts(")");
     }
  lexit_repl:
