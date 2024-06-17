@@ -32,7 +32,7 @@
 
 
 
-typedef uint8_t baf_machine_code_t;
+typedef uint8_t baf_opcode_t;
 #define BAF_RTS           0x60
 #define BAF_INC_ABSOLUTE  0xEE
 #define BAF_JSR           0x20
@@ -44,15 +44,22 @@ typedef uint8_t baf_machine_code_t;
 #define BAF_ADC_ABSOLUTE  0x6D
 #define BAF_BNE           0xD0
 #define BAF_DEC_ABSOLUTE  0xCE
+#define BAF_BVC           0x50
+#define BAF_BVC           0x50
+#define BAF_BCS           0xB0
+#define BAF_CLC           0x18
+#define BAF_BCC           0x90
+#define BAF_SBC_ABSOLUTE  0xED
+#define BAF_SEC           0x38
 
 // BASICfuck state.
 extern uint8_t* baf_bfmem;
 extern uint8_t* baf_cmem_pointer;
 
 // Compiler state.
-extern const uint8_t*      baf_read_buffer;
-extern baf_machine_code_t* baf_write_buffer;
-extern uint16_t            baf_write_buffer_size;
+extern const uint8_t* baf_read_buffer;
+extern baf_opcode_t*  baf_write_buffer;
+extern uint16_t       baf_write_buffer_size;
 
 typedef uint8_t BAFCompileResult;
 #define BAF_COMPILE_SUCCESS           0U
@@ -62,12 +69,12 @@ typedef uint8_t BAFCompileResult;
 /**
  * Bytecode compiles BASICfuck code.
  *
- * @param baf_compiler_read_buffer (global) - the null-terminated program text
+ * @param baf_read_buffer (global) - the null-terminated program text
  *                                            buffer to compile.
- * @param baf_compiler_write_buffer (global) - the buffer to write the compiled
- *                                             program to.
- * @param baf_compiler_write_buffer_size (global) - the size of the program
- *                                                  memory buffer.
+ * @param baf_write_buffer (global) - the buffer to write the compiled program
+ *                                    to.
+ * @param baf_write_buffer_size (global) - the size of the program memory
+ *                                         buffer.
  * @return BAF_COMPILE_SUCCESS on success,
  *         BAF_COMPILE_OUT_OF_MEMORY if the program exceeded the size of the
  *         program memory,
@@ -82,15 +89,16 @@ BAFCompileResult baf_compile();
 
 #include <stdbool.h>
 #include <stddef.h>
+#include <assert.h>
 
 // BASICfuck state.
 uint8_t* baf_bfmem;
 uint8_t* baf_cmem_pointer;
 
 // Compiler state.
-const uint8_t*      baf_read_buffer;
-baf_machine_code_t* baf_write_buffer;
-uint16_t            baf_write_buffer_size;
+const uint8_t* baf_read_buffer;
+baf_opcode_t*  baf_write_buffer;
+uint16_t       baf_write_buffer_size;
 
 /**
  * Performs the first pass of BASICfuck compilation, converting the text program
@@ -106,16 +114,15 @@ static bool baf_compile_first_pass() {
     // Used to count the number of times an instruction occurs.
     uint8_t operand;
     // Used to figure out addressing for self-modifying code.
-    baf_machine_code_t* address;
+    baf_opcode_t* address;
 
-    const uint8_t*      read_address  = baf_read_buffer;
-    baf_machine_code_t* write_address = baf_write_buffer;
+    const uint8_t* read_address  = baf_read_buffer;
+    baf_opcode_t*  write_address = baf_write_buffer;
 
-#define BAF_PUSH_BYTE(byte) *(write_address++) = (byte)
-#define BAF_PUSH_POINTER(type, pointer)         \
+#define BAF_PUSH_TYPE(type, value)              \
     {                                           \
-        *((type*)write_address) = (pointer);  \
-        write_address += 2;                     \
+        *((type*)write_address) = (value);      \
+        write_address += sizeof(type);          \
     }
 
     while (true) {
@@ -127,7 +134,7 @@ static bool baf_compile_first_pass() {
             //if (baf_write_buffer_size >= baf_write_index) return false;
 
             //    rts
-            BAF_PUSH_BYTE(BAF_RTS);
+            BAF_PUSH_TYPE(baf_opcode_t, BAF_RTS);
         } goto lend_first_pass;
 
             // Increments/decrements the current cell.
@@ -139,43 +146,70 @@ static bool baf_compile_first_pass() {
                 ++read_address;
             }
 
+            // TODO: make work correctly.
             //    lda baf_bfmem
-            BAF_PUSH_BYTE(BAF_LDA_ABSOLUTE);
-            BAF_PUSH_POINTER(uint8_t*, baf_bfmem);
+            BAF_PUSH_TYPE(baf_opcode_t, BAF_LDA_ABSOLUTE);
+            BAF_PUSH_TYPE(uint8_t*, baf_bfmem);
             //    sta lset_address1+1
             address = 1 + 17 + write_address;
-            BAF_PUSH_BYTE(BAF_STA_ABSOLUTE);
-            BAF_PUSH_POINTER(baf_machine_code_t*, address);
+            BAF_PUSH_TYPE(baf_opcode_t, BAF_STA_ABSOLUTE);
+            BAF_PUSH_TYPE(baf_opcode_t*, address);
             //    sta lset_address2+1
             address = 1 + 17 + write_address;
-            BAF_PUSH_BYTE(BAF_STA_ABSOLUTE);
-            BAF_PUSH_POINTER(baf_machine_code_t*, address);
+            BAF_PUSH_TYPE(baf_opcode_t, BAF_STA_ABSOLUTE);
+            BAF_PUSH_TYPE(baf_opcode_t*, address);
             //    lda baf_bfmem+1
-            BAF_PUSH_BYTE(BAF_LDA_ABSOLUTE);
-            BAF_PUSH_POINTER(uint8_t*, 1 + baf_bfmem);
+            BAF_PUSH_TYPE(baf_opcode_t, BAF_LDA_ABSOLUTE);
+            BAF_PUSH_TYPE(uint8_t*, 1 + baf_bfmem);
             //    sta lset_address1+2
             address = 2 + 8 + write_address;
-            BAF_PUSH_BYTE(BAF_STA_ABSOLUTE);
-            BAF_PUSH_POINTER(baf_machine_code_t*, address);
+            BAF_PUSH_TYPE(baf_opcode_t, BAF_STA_ABSOLUTE);
+            BAF_PUSH_TYPE(baf_opcode_t*, address);
             //    sta lset_address2+2
             address = 2 + 8 + write_address;
-            BAF_PUSH_BYTE(BAF_STA_ABSOLUTE);
-            BAF_PUSH_POINTER(baf_machine_code_t*, address);
+            BAF_PUSH_TYPE(baf_opcode_t, BAF_STA_ABSOLUTE);
+            BAF_PUSH_TYPE(baf_opcode_t*, address);
             //    lda, #(operand|-operand)
-            BAF_PUSH_BYTE(BAF_LDA_IMMEDIATE);
-            BAF_PUSH_BYTE('+' == instruction ? operand : -operand);
+            BAF_PUSH_TYPE(baf_opcode_t, BAF_LDA_IMMEDIATE);
+            BAF_PUSH_TYPE(baf_opcode_t, '+' == instruction ? operand : -operand);
             // lset_address1:
             //    adc <address>
-            BAF_PUSH_BYTE(BAF_ADC_ABSOLUTE);
-            BAF_PUSH_POINTER(baf_machine_code_t*, NULL);
+            BAF_PUSH_TYPE(baf_opcode_t, BAF_ADC_ABSOLUTE);
+            BAF_PUSH_TYPE(baf_opcode_t*, NULL);
             // lset_address2:
             //    sta <address>
-            BAF_PUSH_BYTE(BAF_STA_ABSOLUTE);
-            BAF_PUSH_POINTER(baf_machine_code_t*, NULL);
+            BAF_PUSH_TYPE(baf_opcode_t, BAF_STA_ABSOLUTE);
+            BAF_PUSH_TYPE(baf_opcode_t*, NULL);
+        } continue;
+
+        case '>': {
+            operand = 1;
+            while (instruction == *(read_address)) {
+                ++operand;
+                ++read_address;
+            }
+
+            //    lda #operand
+            BAF_PUSH_TYPE(baf_opcode_t, BAF_LDA_IMMEDIATE);
+            BAF_PUSH_TYPE(uint8_t,      operand);
+            //    clc
+            BAF_PUSH_TYPE(baf_opcode_t, BAF_CLC);
+            //    adc baf_bfmem
+            BAF_PUSH_TYPE(baf_opcode_t, BAF_ADC_ABSOLUTE);
+            BAF_PUSH_TYPE(uint8_t**,    &baf_bfmem);
+            //    sta baf_bfmem
+            BAF_PUSH_TYPE(baf_opcode_t, BAF_STA_ABSOLUTE);
+            BAF_PUSH_TYPE(uint8_t**,    &baf_bfmem);
+            //    bcc lno_carry
+            BAF_PUSH_TYPE(baf_opcode_t, BAF_BCC);
+            BAF_PUSH_TYPE(uint8_t,      3);
+            //    inc baf_bfmem+1
+            BAF_PUSH_TYPE(baf_opcode_t, BAF_INC_ABSOLUTE);
+            BAF_PUSH_TYPE(uint8_t**,    (uint8_t**)(1 + (uint16_t)&baf_bfmem));
+            // lno_carry:
         } continue;
 
         case '<':
-        case '>':
         case '.':
         case ',':
         case '[':
@@ -184,7 +218,7 @@ static bool baf_compile_first_pass() {
         case '*':
         case '(':
         case ')':
-        case '%':
+        case '%': assert(false && "TODO");
 
             // Ignores non-instructions.
         default: continue;
@@ -258,9 +292,9 @@ static bool baf_compile_first_pass() {
 
     return true;
 
-    // We undefine these macros since they only make sense within the context of
+    // We undefine this macro since they only make sense within the context of
     // this function.
-#undef BAF_PUSH_BYTE
+#undef BAF_PUSH_TYPE
 }
 
 /**

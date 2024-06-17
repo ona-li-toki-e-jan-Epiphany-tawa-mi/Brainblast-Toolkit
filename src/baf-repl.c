@@ -123,7 +123,7 @@ static void help_menu() {
 
 // Memory for the compiled bytecode of entered BASICfuck code.
 #define PROGRAM_MEMORY_SIZE 256U
-static baf_machine_code_t program_memory[PROGRAM_MEMORY_SIZE];
+static baf_opcode_t program_memory[PROGRAM_MEMORY_SIZE];
 
 /**
  * Displays a readout of the machine code of the last program to the user.
@@ -132,7 +132,7 @@ static baf_machine_code_t program_memory[PROGRAM_MEMORY_SIZE];
  * @param program (global) - the program buffer.
  */
 static void display_machine_code() {
-    const baf_machine_code_t* program_address = program_memory;
+    const baf_opcode_t* program_address = program_memory;
 
     uint8_t i = 0;
 
@@ -163,27 +163,13 @@ static void display_machine_code() {
     (void)putchar('\n');
 }
 
-void execute_program() {
-    __asm__ volatile ("lda     %v",   program_memory);
-    __asm__ volatile ("sta     %g+1", ljump_instruction);
-    __asm__ volatile ("lda     %v+1", program_memory);
-    __asm__ volatile ("sta     %g+2", ljump_instruction);
- ljump_instruction:
-    __asm__ volatile ("jsr     %w",   NULL);
-
-    return;
-    // If we don't include a jmp instruction, cc65, annoyingly, strips the label
-    // from the resulting assembly.
-    __asm__ volatile ("jmp     %g", ljump_instruction);
-}
-
 #define INPUT_BUFFER_SIZE 256U
 
 int main(void) {
     uint8_t BASICfuck_memory[BASICFUCK_MEMORY_SIZE];
-
     uint8_t input_buffer[INPUT_BUFFER_SIZE];
     uint8_t history_stack[HISTORY_STACK_SIZE];
+
     // Initalizes the history stack.
     tb_history_stack       = history_stack;
     tb_history_stack_size  = HISTORY_STACK_SIZE;
@@ -241,14 +227,7 @@ int main(void) {
         default: assert(false && "Unexpected bytecode compilation result");
         }
 
-        s_utoa_fputs(2, *(uint8_t*)NULL, 16);
-        putchar('\n');
-        //goto lskip;
-        //execute_program();
-        __asm__ ("jsr    %v", program_memory);
-        //lskip:
-        s_utoa_fputs(2, *(uint8_t*)NULL, 16);
-        putchar('\n');
+        ((void(*)(void))program_memory)();
 
         // Print.
         s_utoa_fputs(3, *baf_bfmem, 10);
