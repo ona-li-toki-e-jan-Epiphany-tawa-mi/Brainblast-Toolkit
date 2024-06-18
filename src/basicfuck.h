@@ -107,6 +107,10 @@ const uint8_t* baf_read_buffer;
 baf_opcode_t*  baf_write_buffer;
 uint16_t       baf_write_buffer_size;
 
+// The first pointer register allocated by cc65. Used for indirect
+// addressing. Zero page address.
+static uint8_t pointer1;
+
 // TODO add bounds checking.
 /**
  * Performs the first pass of BASICfuck compilation, converting the text program
@@ -129,15 +133,10 @@ static bool baf_compile_first_pass() {
     const uint8_t* read_address  = baf_read_buffer;
     baf_opcode_t*  write_address = baf_write_buffer;
 
-    // The first pointer register allocated by cc65. Used for indirect
-    // addressing. Zero page address.
-    uint8_t pointer1 = NULL;
     // We can't access assembly variables directly from C, so instead we use a
     // little inline assembly to copy it to a C variable.
-    __asm__ ("lda    #ptr1  "          );
-    __asm__ ("sta    %v     ", pointer1);
-    __asm__ ("lda    #ptr1+1"          );
-    __asm__ ("sta    %v+1   ", pointer1);
+    __asm__ ("lda    #<(ptr1)"          );
+    __asm__ ("sta    %v      ", pointer1);
 
     /**
      * Pushes data to the write buffer.
@@ -153,7 +152,7 @@ static bool baf_compile_first_pass() {
     /**
      * Computes the operand of counted instructions.
      */
-#define COMPUTE_OPERAND                         \
+#define BAF_COMPUTE_OPERAND                     \
     {                                           \
         operand = 1;                            \
         while (instruction == *read_address) {  \
@@ -177,33 +176,22 @@ static bool baf_compile_first_pass() {
             // Increments/decrements the current cell.
         case '+':
         case '-': {
-            COMPUTE_OPERAND;
+            BAF_COMPUTE_OPERAND;
             // To perform decrements we add the two's complement of the operand
             // to subtract, which is effectively subtraction.
             if ('-' == instruction) operand = -operand;
 
             // Effectively: *baf_bfmem += operand OR *baf_bfmem -= operand
 
-            // lda     #<(_BASICfuck_memory)
-            // ldx     #>(_BASICfuck_memory)
-            // sta     ptr1
-            // stx     ptr1+1
-            // ldy     #$00
-            // lda     (ptr1),y
-            // clc
-            // adc     #$07
-            // sta     (ptr1),y
-
-            // TODO: make work.
             // lda    baf_bfmem
             BAF_PUSH(baf_opcode_t, BAF_LDA_ABSOLUTE);
-            BAF_PUSH(baf_cell_t*, baf_bfmem);
+            BAF_PUSH(baf_cell_t**, &baf_bfmem);
             // sta    pointer1
             BAF_PUSH(baf_opcode_t, BAF_STA_ZEROPAGE);
             BAF_PUSH(uint8_t,      pointer1);
             // lda    baf_bfmem+1
             BAF_PUSH(baf_opcode_t, BAF_LDA_ABSOLUTE);
-            BAF_PUSH(baf_cell_t*, 1+baf_bfmem);
+            BAF_PUSH(baf_cell_t**, (baf_cell_t**)(1+(uint16_t)&baf_bfmem));
             // sta    pointer1+1
             BAF_PUSH(baf_opcode_t, BAF_STA_ZEROPAGE);
             BAF_PUSH(uint8_t,      1+pointer1);
@@ -224,7 +212,7 @@ static bool baf_compile_first_pass() {
         } continue;
 
         case '<': {
-            COMPUTE_OPERAND;
+            BAF_COMPUTE_OPERAND;
 
             // Effectively: baf_bfmem -= operand
 
@@ -249,7 +237,7 @@ static bool baf_compile_first_pass() {
         } continue;
 
         case '>': {
-            COMPUTE_OPERAND;
+            BAF_COMPUTE_OPERAND;
 
             // Effectively: baf_bfmem += operand
 
@@ -281,7 +269,7 @@ static bool baf_compile_first_pass() {
         case '*': assert(false && "TODO");
 
         case '(': {
-            COMPUTE_OPERAND;
+            BAF_COMPUTE_OPERAND;
 
             // Effectively: baf_cmem_pointer -= operand
 
@@ -306,7 +294,7 @@ static bool baf_compile_first_pass() {
         } continue;
 
         case ')': {
-            COMPUTE_OPERAND;
+            BAF_COMPUTE_OPERAND;
 
             // Effectively: baf_cmem_pointer += operand
 
@@ -335,70 +323,6 @@ static bool baf_compile_first_pass() {
             // Ignores non-instructions.
         default: continue;
         }
-
-
-
-    /*     // End of program. */
-    /* lfinish_bytecode_compilation: */
-    /*     baf_compiler_write_buffer[baf_compiler_write_index] = BAF_OPCODE_HALT; */
-    /*     break; */
-
-    /*     // Takes no arguments. */
-    /* lcompile_instruction_no_arugments: */
-    /*     if (baf_compiler_write_index >= baf_compiler_write_buffer_size) */
-    /*         return false; */
-
-    /*     baf_compiler_write_buffer[baf_compiler_write_index] = opcode; */
-    /*     ++baf_compiler_read_index; */
-    /*     ++baf_compiler_write_index; */
-
-    /*     continue; */
-
-    /*     // Takes a 16-bit address relative to program memory as a parameter, */
-    /*     // which will be handled by the second pass. */
-    /* lcompile_jump_instruction: */
-    /*     if (baf_compiler_write_index + 2 >= baf_compiler_write_buffer_size) */
-    /*         return false; */
-
-    /*     baf_compiler_write_buffer[baf_compiler_write_index]   = opcode; */
-    /*     baf_compiler_write_buffer[baf_compiler_write_index+1] = 0xFF; */
-    /*     baf_compiler_write_buffer[baf_compiler_write_index+2] = 0xFF; */
-    /*     ++baf_compiler_read_index; */
-    /*     baf_compiler_write_index += 3; */
-
-    /*     continue; */
-
-    /*     // Takes an 8-bit count of how many times to preform the operation. */
-    /* lcompile_counted_instruction: */
-    /*     instruction_count = 0; */
-
-    /*     // Count number of consecutive instructions. */
-    /*     while (true) { */
-    /*         other_instruction = baf_compiler_read_buffer[baf_compiler_read_index]; */
-
-    /*         if (other_instruction != instruction) */
-    /*             break; */
-
-    /*         ++instruction_count; */
-    /*         ++baf_compiler_read_index; */
-    /*     } */
-
-    /*     // Each instruction opcode can only take an 8-bit value, so this chops up */
-    /*     // the full count into separate 8-bit chunks. */
-    /*     while (instruction_count > 0) { */
-    /*         if (baf_compiler_write_index + 1 >= baf_compiler_write_buffer_size) */
-    /*             return false; */
-
-    /*         chunk_count = instruction_count > 255 ? 255 : (uint8_t)instruction_count; */
-
-    /*         baf_compiler_write_buffer[baf_compiler_write_index]   = opcode; */
-    /*         baf_compiler_write_buffer[baf_compiler_write_index+1] = chunk_count; */
-    /*         baf_compiler_write_index += 2; */
-
-    /*         instruction_count -= (uint16_t)chunk_count; */
-    /*     } */
-
-    /*     continue; */
     }
  lend_first_pass:
 
@@ -407,7 +331,7 @@ static bool baf_compile_first_pass() {
     // We undefine these macros since they only make sense within the context of
     // this function.
 #undef BAF_PUSH
-#undef COMPUTE_OPERAND
+#undef BAF_COMPUTE_OPERAND
 }
 
 /**
@@ -485,18 +409,6 @@ BAFCompileResult baf_compile() {
     return BAF_COMPILE_SUCCESS;
 }
 
-/* // Interpreter state. */
-/* const uint8_t* baf_interpreter_program_memory; */
-/* uint8_t*       baf_interpreter_bfmem; */
-/* uint16_t       baf_interpreter_bfmem_size; */
-/* uint16_t       baf_interpreter_bfmem_index; */
-/* uint8_t*       baf_interpreter_cmem_pointer; */
-
-/* // Global variables for exchaning values with inline assembler. */
-/* static uint8_t  baf_interpreter_register_a */
-/*              ,  baf_interpreter_register_x */
-/*              ,  baf_interpreter_register_y; */
-
 /* /\** */
 /*  * Runs the execute part of the BASICfuck execute instruction. */
 /*  * */
@@ -534,64 +446,12 @@ BAFCompileResult baf_compile() {
 /* } */
 
 /* void baf_interpret() { */
-/*     baf_opcode_t opcode; */
-/*     uint8_t      argument; */
-
-/*     uint16_t program_index = 0; */
-
-/*     static const void *const jump_table[] = { */
-/*         &&lopcode_halt,                           // BAF_OPCODE_HALT. */
-/*         &&lopcode_increment,                      // BAF_OPCODE_INCREMENT. */
-/*         &&lopcode_decrement,                      // BAF_OPCODE_DECREMENT. */
-/*         &&lopcode_bfmem_left,                     // BAF_OPCODE_BFMEM_LEFT. */
-/*         &&lopcode_bfmem_right,                    // BAF_OPCODE_BFMEM_RIGHT. */
-/*         &&lopcode_print,                          // BAF_OPCODE_PRINT. */
-/*         &&lopcode_input,                          // BAF_OPCODE_INPUT. */
-/*         &&lopcode_jeq,                            // BAF_OPCODE_JEQ. */
-/*         &&lopcode_jne,                            // BAF_OPCODE_JNE. */
-/*         &&lopcode_cmem_read,                      // BAF_OPCODE_CMEM_READ. */
-/*         &&lopcode_cmem_write,                     // BAF_OPCODE_CMEM_WRITE. */
-/*         &&lopcode_cmem_left,                      // BAF_OPCODE_CMEM_LEFT. */
-/*         &&lopcode_cmem_right,                     // BAF_OPCODE_CMEM_RIGHT. */
-/*         &&lopcode_execute                         // BAF_OPCODE_EXECUTE. */
-/*     }; */
-
 
 /*     while (true) { */
 /*         if (kbhit() != 0 && cgetc() == KEYBOARD_STOP) { */
 /*             puts("?ABORT"); */
 /*             break; */
 /*         } */
-
-
-/*         opcode   = baf_interpreter_program_memory[program_index]; */
-/*         argument = baf_interpreter_program_memory[program_index+1]; */
-/*         assert(opcode < sizeof(jump_table)/sizeof(jump_table[0]) && "Unknown opcode"); */
-/*         goto *jump_table[opcode]; */
-
-/*     lopcode_halt: */
-/*         break; */
-
-/*     lopcode_increment: */
-/*         baf_interpreter_bfmem[baf_interpreter_bfmem_index] += argument; */
-/*         goto lfinish_interpreter_cycle; */
-
-/*     lopcode_decrement: */
-/*         baf_interpreter_bfmem[baf_interpreter_bfmem_index] -= argument; */
-/*         goto lfinish_interpreter_cycle; */
-
-/*     lopcode_bfmem_left: */
-/*         if (baf_interpreter_bfmem_index > argument) { */
-/*             baf_interpreter_bfmem_index -= argument; */
-/*         } else { */
-/*             baf_interpreter_bfmem_index = 0; */
-/*         } */
-/*         goto lfinish_interpreter_cycle; */
-
-/*     lopcode_bfmem_right: */
-/*         if (baf_interpreter_bfmem_index + argument < baf_interpreter_bfmem_size) */
-/*             baf_interpreter_bfmem_index += argument; */
-/*         goto lfinish_interpreter_cycle; */
 
 /*     lopcode_print: */
 /*         (void)putchar(baf_interpreter_bfmem[baf_interpreter_bfmem_index]); */
@@ -628,22 +488,6 @@ BAFCompileResult baf_compile() {
 /*         *baf_interpreter_cmem_pointer = baf_interpreter_bfmem[baf_interpreter_bfmem_index]; */
 /*         goto lfinish_interpreter_cycle; */
 
-/*     lopcode_cmem_left: */
-/*         if ((uint16_t)baf_interpreter_cmem_pointer > argument) { */
-/*             baf_interpreter_cmem_pointer -= argument; */
-/*         } else { */
-/*             baf_interpreter_cmem_pointer = 0; */
-/*         } */
-/*         goto lfinish_interpreter_cycle; */
-
-/*     lopcode_cmem_right: */
-/*         if (UINT16_MAX - (uint16_t)baf_interpreter_cmem_pointer > argument) { */
-/*             baf_interpreter_cmem_pointer += argument; */
-/*         } else { */
-/*             baf_interpreter_cmem_pointer = (uint8_t*)UINT16_MAX; */
-/*         } */
-/*         goto lfinish_interpreter_cycle; */
-
 /*     lopcode_execute: */
 /*         baf_interpreter_register_a = baf_interpreter_bfmem[baf_interpreter_bfmem_index]; */
 /*         baf_interpreter_register_x = baf_interpreter_bfmem[baf_interpreter_bfmem_index+1]; */
@@ -653,12 +497,6 @@ BAFCompileResult baf_compile() {
 /*         baf_interpreter_bfmem[baf_interpreter_bfmem_index+1] = baf_interpreter_register_x; */
 /*         baf_interpreter_bfmem[baf_interpreter_bfmem_index+2] = baf_interpreter_register_y; */
 /*         goto lfinish_interpreter_cycle; */
-
-
-/*     lfinish_interpreter_cycle: */
-/*         // Jumped to after an opcode has been executed. */
-/*         program_index += baf_opcode_size_table[opcode]; */
-/*     } */
 /* } */
 
 #endif // BASICFUCK_IMPLEMENTATION
