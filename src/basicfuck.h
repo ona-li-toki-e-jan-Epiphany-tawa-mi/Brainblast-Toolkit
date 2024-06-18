@@ -50,6 +50,7 @@ typedef uint8_t baf_opcode_t;
 #define BAF_LDA_ABSOLUTE   0xAD
 #define BAF_LDA_IMMEDIATE  0xA9
 #define BAF_LDA_INDIRECT_Y 0xB1
+#define BAF_LDX_ABSOLUTE   0xAE
 #define BAF_LDX_IMMEDIATE  0xA2
 #define BAF_LDY_IMMEDIATE  0xA0
 #define BAF_RTS            0x60
@@ -58,6 +59,7 @@ typedef uint8_t baf_opcode_t;
 #define BAF_STA_ABSOLUTE   0x8D
 #define BAF_STA_INDIRECT_Y 0x91
 #define BAF_STA_ZEROPAGE   0x85
+#define BAF_STX_ZEROPAGE   0x86
 
 // BASICfuck state.
 extern baf_cell_t* baf_bfmem;
@@ -112,6 +114,7 @@ uint16_t       baf_write_buffer_size;
 static uint8_t pointer1;
 
 // TODO add bounds checking.
+// TODO add abiltiy to abort program.
 /**
  * Performs the first pass of BASICfuck compilation, converting the text program
  * to machine code.
@@ -167,7 +170,7 @@ static bool baf_compile_first_pass() {
         switch (instruction) {
             // The null-terminator marks the end of the program.
         case '\0': {
-            // Effectively: return
+            // return;
 
             //    rts
             BAF_PUSH(baf_opcode_t, BAF_RTS);
@@ -181,40 +184,41 @@ static bool baf_compile_first_pass() {
             // to subtract, which is effectively subtraction.
             if ('-' == instruction) operand = -operand;
 
-            // Effectively: *baf_bfmem += operand OR *baf_bfmem -= operand
+            // *baf_bfmem += operand;
 
-            // lda    baf_bfmem
+            //    lda    baf_bfmem
             BAF_PUSH(baf_opcode_t, BAF_LDA_ABSOLUTE);
             BAF_PUSH(baf_cell_t**, &baf_bfmem);
-            // sta    pointer1
+            //    sta    pointer1
             BAF_PUSH(baf_opcode_t, BAF_STA_ZEROPAGE);
             BAF_PUSH(uint8_t,      pointer1);
-            // lda    baf_bfmem+1
+            //    lda    baf_bfmem+1
             BAF_PUSH(baf_opcode_t, BAF_LDA_ABSOLUTE);
             BAF_PUSH(baf_cell_t**, (baf_cell_t**)(1+(uint16_t)&baf_bfmem));
-            // sta    pointer1+1
+            //    sta    pointer1+1
             BAF_PUSH(baf_opcode_t, BAF_STA_ZEROPAGE);
             BAF_PUSH(uint8_t,      1+pointer1);
-            // ldy    #$00
+            //    ldy    #$00
             BAF_PUSH(baf_opcode_t, BAF_LDY_IMMEDIATE);
             BAF_PUSH(uint8_t, 0);
-            // lda    (pointer1),y
+            //    lda    (pointer1),y
             BAF_PUSH(baf_opcode_t, BAF_LDA_INDIRECT_Y);
             BAF_PUSH(uint8_t,      pointer1);
-            // clc
+            //    clc
             BAF_PUSH(baf_opcode_t, BAF_CLC);
-            // adc    #operand
+            //    adc    #operand
             BAF_PUSH(baf_opcode_t, BAF_ADC_IMMEDIATE);
             BAF_PUSH(uint8_t, operand);
-            // sta    (pointer1),y
+            //    sta    (pointer1),y
             BAF_PUSH(baf_opcode_t, BAF_STA_INDIRECT_Y);
             BAF_PUSH(uint8_t,      pointer1);
         } continue;
 
+            // Moves the cell memory pointer to the right.
         case '<': {
             BAF_COMPUTE_OPERAND;
 
-            // Effectively: baf_bfmem -= operand
+            // baf_bfmem -= operand;
 
             //    lda    baf_bfmem
             BAF_PUSH(baf_opcode_t, BAF_LDA_ABSOLUTE);
@@ -236,10 +240,11 @@ static bool baf_compile_first_pass() {
             // lno_borrow:
         } continue;
 
+            // Moves the cell memory pointer to the right.
         case '>': {
             BAF_COMPUTE_OPERAND;
 
-            // Effectively: baf_bfmem += operand
+            // baf_bfmem += operand;
 
             //    lda    #operand
             BAF_PUSH(baf_opcode_t, BAF_LDA_IMMEDIATE);
@@ -261,17 +266,77 @@ static bool baf_compile_first_pass() {
             // lno_carry:
         } continue;
 
-        case '.':
-        case ',':
+            // TODO make accept operand.
+            // Prints the value of the current cell as a character.
+        case '.': {
+            // (void)putchar(*baf_bfmem);
+
+            //    lda    baf_bfmem
+            BAF_PUSH(baf_opcode_t, BAF_LDA_ABSOLUTE);
+            BAF_PUSH(baf_cell_t**, &baf_bfmem);
+            //    sta    pointer1
+            BAF_PUSH(baf_opcode_t, BAF_STA_ZEROPAGE);
+            BAF_PUSH(uint8_t,      pointer1);
+            //    lda    baf_bfmem+1
+            BAF_PUSH(baf_opcode_t, BAF_LDA_ABSOLUTE);
+            BAF_PUSH(baf_cell_t**, (baf_cell_t**)(1+(uint16_t)&baf_bfmem));
+            //    sta    pointer1+1
+            BAF_PUSH(baf_opcode_t, BAF_STA_ZEROPAGE);
+            BAF_PUSH(uint8_t,      1+pointer1);
+            //    ldy    #$00
+            BAF_PUSH(baf_opcode_t, BAF_LDY_IMMEDIATE);
+            BAF_PUSH(uint8_t, 0);
+            //    lda    (pointer1),y
+            BAF_PUSH(baf_opcode_t, BAF_LDA_INDIRECT_Y);
+            BAF_PUSH(uint8_t,      pointer1);
+            //    ldx    #$00
+            BAF_PUSH(baf_opcode_t, BAF_LDX_IMMEDIATE);
+            BAF_PUSH(uint8_t,      0);
+            //    jsr    _putchar
+            BAF_PUSH(baf_opcode_t, BAF_JSR);
+            *((int(**)(int))write_address) = &putchar;
+            write_address += sizeof(int(*)(int));
+        } continue;
+
+            // Accepts a character from the keyboard and stores its value in the
+            // current cell.
+        case ',': {
+            // *baf_bfmem = s_wrapped_cgetc();
+
+            //    jsr    _s_wrapped_cgetc
+            BAF_PUSH(baf_opcode_t, BAF_JSR);
+            *((uint8_t(**)(void))write_address) = &s_wrapped_cgetc;
+            write_address += sizeof(uint8_t(*)(void));
+            //    ldx    baf_bfmem
+            BAF_PUSH(baf_opcode_t, BAF_LDX_ABSOLUTE);
+            BAF_PUSH(baf_cell_t**, &baf_bfmem);
+            //    stx    pointer1
+            BAF_PUSH(baf_opcode_t, BAF_STX_ZEROPAGE);
+            BAF_PUSH(uint8_t,      pointer1);
+            //    ldx    baf_bfmem+1
+            BAF_PUSH(baf_opcode_t, BAF_LDX_ABSOLUTE);
+            BAF_PUSH(baf_cell_t**, (baf_cell_t**)(1+(uint16_t)&baf_bfmem));
+            //    stx    pointer1+1
+            BAF_PUSH(baf_opcode_t, BAF_STX_ZEROPAGE);
+            BAF_PUSH(uint8_t,      1+pointer1);
+            //    ldy    #$00
+            BAF_PUSH(baf_opcode_t, BAF_LDY_IMMEDIATE);
+            BAF_PUSH(uint8_t, 0);
+            //    sta    (pointer1),y
+            BAF_PUSH(baf_opcode_t, BAF_STA_INDIRECT_Y);
+            BAF_PUSH(uint8_t,      pointer1);
+        } continue;
+
         case '[':
         case ']':
         case '@':
         case '*': assert(false && "TODO");
 
+            // Moves the computer memory pointer to the left.
         case '(': {
             BAF_COMPUTE_OPERAND;
 
-            // Effectively: baf_cmem_pointer -= operand
+            // baf_cmem_pointer -= operand;
 
             //    lda    baf_cmem_pointer
             BAF_PUSH(baf_opcode_t, BAF_LDA_ABSOLUTE);
@@ -293,10 +358,11 @@ static bool baf_compile_first_pass() {
             // lno_borrow:
         } continue;
 
+            // Moves the computer memory pointer to the right.
         case ')': {
             BAF_COMPUTE_OPERAND;
 
-            // Effectively: baf_cmem_pointer += operand
+            // baf_cmem_pointer += operand;
 
             //    lda    #operand
             BAF_PUSH(baf_opcode_t, BAF_LDA_IMMEDIATE);
@@ -452,19 +518,6 @@ BAFCompileResult baf_compile() {
 /*             puts("?ABORT"); */
 /*             break; */
 /*         } */
-
-/*     lopcode_print: */
-/*         (void)putchar(baf_interpreter_bfmem[baf_interpreter_bfmem_index]); */
-/*         goto lfinish_interpreter_cycle; */
-
-/*     lopcode_input: */
-/*         argument = s_wrapped_cgetc(); */
-/*         if (KEYBOARD_STOP == argument) { */
-/*             puts("?ABORT"); */
-/*             break; */
-/*         }; */
-/*         baf_interpreter_bfmem[baf_interpreter_bfmem_index] = argument; */
-/*         goto lfinish_interpreter_cycle; */
 
 /*     lopcode_jeq: */
 /*         if (baf_interpreter_bfmem[baf_interpreter_bfmem_index] == 0) { */
