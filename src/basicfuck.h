@@ -338,9 +338,87 @@ static bool baf_compile_first_pass() {
         } continue;
 
         case '[':
-        case ']':
-        case '@':
-        case '*': assert(false && "TODO");
+        case ']': assert(false && "TODO");
+
+            // Writes the value at the computer memory pointer's address to the
+            // current cell.
+        case '@': {
+            // *baf_bfmem = *baf_cmem_pointer;
+
+            //    lda    baf_cmem_pointer
+            BAF_PUSH(baf_opcode_t, BAF_LDA_ABSOLUTE);
+            BAF_PUSH(uint8_t**,    &baf_cmem_pointer);
+            //    sta    pointer1
+            BAF_PUSH(baf_opcode_t, BAF_STA_ZEROPAGE);
+            BAF_PUSH(uint8_t,      pointer1);
+            //    lda    baf_cmem_pointer+1
+            BAF_PUSH(baf_opcode_t, BAF_LDA_ABSOLUTE);
+            BAF_PUSH(uint8_t**,    (uint8_t**)(1+(uint16_t)&baf_cmem_pointer));
+            //    sta    pointer1+1
+            BAF_PUSH(baf_opcode_t, BAF_STA_ZEROPAGE);
+            BAF_PUSH(uint8_t,      1+pointer1);
+            //    ldy    #$00
+            BAF_PUSH(baf_opcode_t, BAF_LDY_IMMEDIATE);
+            BAF_PUSH(uint8_t,      0);
+            //    lda    (pointer1),y
+            BAF_PUSH(baf_opcode_t, BAF_LDA_INDIRECT_Y);
+            BAF_PUSH(uint8_t,      pointer1);
+            //    ldx    baf_bfmem
+            BAF_PUSH(baf_opcode_t, BAF_LDX_ABSOLUTE);
+            BAF_PUSH(baf_cell_t**, &baf_bfmem);
+            //    stx    pointer1
+            BAF_PUSH(baf_opcode_t, BAF_STX_ZEROPAGE);
+            BAF_PUSH(baf_cell_t,   pointer1);
+            //    ldx    baf_bfmem+1
+            BAF_PUSH(baf_opcode_t, BAF_LDX_ABSOLUTE);
+            BAF_PUSH(baf_cell_t**, (baf_cell_t**)(1+(uint16_t)&baf_bfmem));
+            //    stx    pointer1+1
+            BAF_PUSH(baf_opcode_t, BAF_STX_ZEROPAGE);
+            BAF_PUSH(baf_cell_t,   1+pointer1);
+            //    sta    (pointer1),y
+            BAF_PUSH(baf_opcode_t, BAF_STA_INDIRECT_Y);
+            BAF_PUSH(baf_cell_t,   pointer1);
+        } continue;
+
+            // Writes the value of the current cell to the computer memory
+            // pointer's address.
+        case '*': {
+            // *baf_cmem_pointer = *baf_bfmem;
+
+            //    lda    baf_bfmem
+            BAF_PUSH(baf_opcode_t, BAF_LDA_ABSOLUTE);
+            BAF_PUSH(baf_cell_t**, &baf_bfmem);
+            //    sta    pointer1
+            BAF_PUSH(baf_opcode_t, BAF_STA_ZEROPAGE);
+            BAF_PUSH(uint8_t,      pointer1);
+            //    lda    baf_bfmem+1
+            BAF_PUSH(baf_opcode_t, BAF_LDA_ABSOLUTE);
+            BAF_PUSH(baf_cell_t**, (baf_cell_t**)(1+(uint16_t)&baf_bfmem));
+            //    sta    pointer1+1
+            BAF_PUSH(baf_opcode_t, BAF_STA_ZEROPAGE);
+            BAF_PUSH(uint8_t,      1+pointer1);
+            //    ldy    #$00
+            BAF_PUSH(baf_opcode_t, BAF_LDY_IMMEDIATE);
+            BAF_PUSH(uint8_t,      0);
+            //    lda    (pointer1),y
+            BAF_PUSH(baf_opcode_t, BAF_LDA_INDIRECT_Y);
+            BAF_PUSH(uint8_t,      pointer1);
+            //    ldx    baf_cmem_pointer
+            BAF_PUSH(baf_opcode_t, BAF_LDX_ABSOLUTE);
+            BAF_PUSH(uint8_t**,    &baf_cmem_pointer);
+            //    stx    pointer1
+            BAF_PUSH(baf_opcode_t, BAF_STX_ZEROPAGE);
+            BAF_PUSH(uint8_t,      pointer1);
+            //    ldx    baf_cmem_pointer+1
+            BAF_PUSH(baf_opcode_t, BAF_LDX_ABSOLUTE);
+            BAF_PUSH(uint8_t**,    (uint8_t**)(1+(uint16_t)&baf_cmem_pointer));
+            //    stx    pointer1+1
+            BAF_PUSH(baf_opcode_t, BAF_STX_ZEROPAGE);
+            BAF_PUSH(uint8_t,      1+pointer1);
+            //    sta    (pointer1),y
+            BAF_PUSH(baf_opcode_t, BAF_STA_INDIRECT_Y);
+            BAF_PUSH(uint8_t,      pointer1);
+        } continue;
 
             // Moves the computer memory pointer to the left.
         case '(': {
