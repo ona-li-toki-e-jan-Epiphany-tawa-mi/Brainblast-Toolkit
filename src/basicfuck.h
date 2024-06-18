@@ -153,6 +153,18 @@ static bool baf_compile_first_pass() {
     }
 
     /**
+     * Pushes a function pointer to the write buffer.
+     * @param return_type - the function's return type.
+     * @param argument_types - the function's argument types.
+     * @param pointer - the function pointer/address.
+     */
+#define BAF_PUSH_FUNCTION(return_type, argument_types, pointer)         \
+    {                                                                   \
+        *((return_type(**)(argument_types))write_address) = (pointer);  \
+        write_address += sizeof(return_type(*)(argument_types));        \
+    }
+
+    /**
      * Computes the operand of counted instructions.
      */
 #define BAF_COMPUTE_OPERAND                     \
@@ -294,8 +306,7 @@ static bool baf_compile_first_pass() {
             BAF_PUSH(uint8_t,      0);
             //    jsr    _putchar
             BAF_PUSH(baf_opcode_t, BAF_JSR);
-            *((int(**)(int))write_address) = &putchar;
-            write_address += sizeof(int(*)(int));
+            BAF_PUSH_FUNCTION(int, int, &putchar);
         } continue;
 
             // Accepts a character from the keyboard and stores its value in the
@@ -305,8 +316,7 @@ static bool baf_compile_first_pass() {
 
             //    jsr    _s_wrapped_cgetc
             BAF_PUSH(baf_opcode_t, BAF_JSR);
-            *((uint8_t(**)(void))write_address) = &s_wrapped_cgetc;
-            write_address += sizeof(uint8_t(*)(void));
+            BAF_PUSH_FUNCTION(uint8_t, void, &s_wrapped_cgetc);
             //    ldx    baf_bfmem
             BAF_PUSH(baf_opcode_t, BAF_LDX_ABSOLUTE);
             BAF_PUSH(baf_cell_t**, &baf_bfmem);
@@ -398,6 +408,7 @@ static bool baf_compile_first_pass() {
     // this function.
 #undef BAF_PUSH
 #undef BAF_COMPUTE_OPERAND
+#undef BAF_PUSH_FUNCTION
 }
 
 /**
