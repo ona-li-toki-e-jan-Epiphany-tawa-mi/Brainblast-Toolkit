@@ -133,7 +133,8 @@ static baf_opcode_t program_memory[PROGRAM_MEMORY_SIZE];
  */
 static void display_machine_code() {
     // To make the code smaller and faster, rather than accessing the buffer via
-    // index (i.e. buffer[index],) we just directly move a pointer instead.
+    // integer index (i.e. buffer[index],) we just directly move a pointer
+    // instead.
     const baf_opcode_t* program_address = program_memory;
 
     uint8_t i = 0;
@@ -165,15 +166,23 @@ static void display_machine_code() {
     (void)putchar('\n');
 }
 
-
-
-static baf_cell_t BASICfuck_memory[BASICFUCK_MEMORY_SIZE];
-
 #define INPUT_BUFFER_SIZE 256U
-static uint8_t input_buffer[INPUT_BUFFER_SIZE];
-static uint8_t history_stack[HISTORY_STACK_SIZE];
 
 int main(void) {
+    static baf_cell_t  cell_memory[BASICFUCK_MEMORY_SIZE];
+    static BAFCompiler compiler                = {0};
+    static uint8_t*    cell_memory_pointer     = cell_memory;
+    static uint8_t*    computer_memory_pointer = NULL;
+
+    static uint8_t input_buffer[INPUT_BUFFER_SIZE];
+    static uint8_t history_stack[HISTORY_STACK_SIZE];
+
+    // Initalizes the compiler.
+    compiler.read_buffer             = input_buffer;
+    compiler.write_buffer            = program_memory;
+    compiler.cell_memory_pointer     = &cell_memory_pointer;
+    compiler.computer_memory_pointer = &computer_memory_pointer;
+
     // Initalizes the history stack.
     tb_history_stack       = history_stack;
     tb_history_stack_size  = HISTORY_STACK_SIZE;
@@ -181,13 +190,6 @@ int main(void) {
 
     // Initializes global screen size variables in screen.h.
     screensize(&s_width, &s_height);
-
-    // Initalizes the compiler.
-    baf_bfmem             = BASICfuck_memory;
-    baf_cmem_pointer      = 0;
-    baf_read_buffer       = input_buffer;
-    baf_write_buffer      = program_memory;
-    baf_write_buffer_size = PROGRAM_MEMORY_SIZE;
 
     clrscr();
     (void)puts("Brainblast-Toolkit BASICfuck REPL " TOOLKIT_VERSION "\n");
@@ -220,7 +222,7 @@ int main(void) {
         }
 
         // Evaluate.
-        switch (baf_compile()) {
+        switch (baf_compile(&compiler)) {
         case BAF_COMPILE_OUT_OF_MEMORY: {
             (void)puts("?OUT OF MEMORY");
         } continue;
@@ -234,11 +236,11 @@ int main(void) {
         ((void(*)(void))program_memory)();
 
         // Print.
-        s_utoa_fputs(3, *baf_bfmem, 10);
+        s_utoa_fputs(3, *cell_memory_pointer, 10);
         (void)fputs(" (Cell ", stdout);
-        s_utoa_fputs(5, (int)(baf_bfmem - BASICfuck_memory), 10);
+        s_utoa_fputs(5, (int)(cell_memory_pointer - cell_memory), 10);
         (void)fputs(", Memory $", stdout);
-        s_utoa_fputs(4, (int)baf_cmem_pointer, 16);
+        s_utoa_fputs(4, (int)computer_memory_pointer, 16);
         (void)puts(")");
     }
  lexit_repl:

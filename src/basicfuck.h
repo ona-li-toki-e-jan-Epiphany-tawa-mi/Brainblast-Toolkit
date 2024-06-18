@@ -18,7 +18,7 @@
  */
 
 /*
- * BASICfuck bytecode compiler and related utilities.
+ * BASICfuck JIT compiler.
  *
  * Preprocessor parameters:
  * - BASICFUCK_IMPLEMENTATION - Define in *one* source file to instantiate the
@@ -32,8 +32,14 @@
 
 
 
+/**
+ * BASICfuck cell memory type.
+ */
 typedef uint8_t baf_cell_t;
 
+/**
+ * 6502 instruction opcodes type.
+ */
 typedef uint8_t baf_opcode_t;
 #define BAF_ADC_ABSOLUTE   0x6D
 #define BAF_ADC_IMMEDIATE  0x69
@@ -61,36 +67,36 @@ typedef uint8_t baf_opcode_t;
 #define BAF_STA_ZEROPAGE   0x85
 #define BAF_STX_ZEROPAGE   0x86
 
-// BASICfuck state.
-extern baf_cell_t* baf_bfmem;
-extern uint8_t*    baf_cmem_pointer;
-
-// Compiler state.
-extern const uint8_t* baf_read_buffer;
-extern baf_opcode_t*  baf_write_buffer;
-extern uint16_t       baf_write_buffer_size;
+/**
+ * BASICfuck compiler configuration.
+ */
+typedef struct {
+    // Buffer to read BASICfuck instructions from.
+    const uint8_t* read_buffer;
+    // Buffer to write the generated 6502 machine code to.
+    baf_opcode_t*  write_buffer;
+    // A pointer to the variable to use as the pointer into cell memory in the
+    // generated code.
+    baf_cell_t**   cell_memory_pointer;
+    // A pointer to the variable to use as the pointer into computer memory in
+    // the generated code.
+    uint8_t**      computer_memory_pointer;
+} BAFCompiler;
 
 typedef uint8_t BAFCompileResult;
 #define BAF_COMPILE_SUCCESS           0U
 #define BAF_COMPILE_OUT_OF_MEMORY     1U
 #define BAF_COMPILE_UNTERMINATED_LOOP 2U
-
 /**
  * Bytecode compiles BASICfuck code.
- *
- * @param baf_read_buffer (global) - the null-terminated program text
- *                                            buffer to compile.
- * @param baf_write_buffer (global) - the buffer to write the compiled program
- *                                    to.
- * @param baf_write_buffer_size (global) - the size of the program memory
- *                                         buffer.
+ * @param compiler.
  * @return BAF_COMPILE_SUCCESS on success,
  *         BAF_COMPILE_OUT_OF_MEMORY if the program exceeded the size of the
  *         program memory,
  *         BAF_COMPILE_UNTERMINATED_LOOP if the program has an unterminated
  *         loop.
  */
-BAFCompileResult baf_compile();
+BAFCompileResult baf_compile(const BAFCompiler* compiler);
 
 
 
@@ -100,84 +106,91 @@ BAFCompileResult baf_compile();
 #include <stddef.h>
 #include <assert.h>
 
-// BASICfuck state.
-baf_cell_t* baf_bfmem;
-uint8_t*    baf_cmem_pointer;
+/**
+ * A pointer to the variable to use as the pointer into cell memory in the
+ * the generated code.
+ */
+static baf_cell_t** baf_cell_memory_pointer = NULL;
 
-// Compiler state.
-const uint8_t* baf_read_buffer;
-baf_opcode_t*  baf_write_buffer;
-uint16_t       baf_write_buffer_size;
+/**
+ * A pointer to the variable to use as the pointer into computer memory in
+ * the generated code.
+ */
+static uint8_t** baf_computer_memory_pointer = NULL;
 
-// The first pointer register allocated by cc65. Used for indirect
-// addressing. Zero page address.
-static uint8_t pointer1;
+/**
+ * The address in the read buffer to read instructions from. Must be intialized
+ * prior to calls to the compilation leaf-functions, and is clobbered by them.
+ */
+static const uint8_t* baf_read_address = NULL;
+
+/**
+ * The address in the write buffer to write compiled programs to. Must be
+ * initialized prior to calls to the compilation leaf-functions, and is
+ * clobbered by them.
+ */
+static baf_opcode_t* baf_write_address = NULL;
+/**
+ * Pushes data to the write buffer.
+ * @param type - the type of the data.
+ * @param value - the data.
+ * @param baf_write_address (global) - the current write address.
+ */
+#define BAF_PUSH(type, value)                                           \
+    {                                                                   \
+        *((type*)baf_write_address) = (value);                          \
+        baf_write_address += sizeof(type);                              \
+    }
+/**
+ * Pushes a function pointer to the write buffer.
+ * @param return_type - the function's return type.
+ * @param argument_types - the function's argument types.
+ * @param pointer - the function pointer/address.
+ * @param baf_write_address (global).
+ */
+#define BAF_PUSH_FUNCTION(return_type, argument_types, pointer)            \
+    {                                                                      \
+        *((return_type(**)(argument_types))baf_write_address) = (pointer); \
+        baf_write_address += sizeof(return_type(*)(argument_types));       \
+    }
+
+/**
+ * The first pointer register allocated by cc65. Used for indirect
+ * addressing. Zero page address.
+ */
+static uint8_t pointer1 = NULL;
+
 
 // TODO add bounds checking.
 // TODO add abiltiy to abort program.
 /**
  * Performs the first pass of BASICfuck compilation, converting the text program
  * to machine code.
- *
- * @param baf_read_buffer (global) - the read buffer.
- * @param baf_write_buffer (global) - the write buffer.
- * @param baf_write_buffer_size (global) - the size of the write buffer.
+ * @param baf_read_address (global).
+ * @param baf_write_address (global).
  * @return true if succeeded, false if ran out of memory.
  */
 static bool baf_compile_first_pass() {
     uint8_t instruction = 0;
     // Used to count the number of times an instruction occurs.
     uint8_t operand = 0;
-    // Used to figure out addressing for self-modifying code.
-    baf_opcode_t* address = NULL;
-
-    // To make the code smaller and faster, rather than accessing the buffer via
-    // index (i.e. buffer[index],) we just directly move a pointer instead.
-    const uint8_t* read_address  = baf_read_buffer;
-    baf_opcode_t*  write_address = baf_write_buffer;
-
-    // We can't access assembly variables directly from C, so instead we use a
-    // little inline assembly to copy it to a C variable.
-    __asm__ ("lda    #<(ptr1)"          );
-    __asm__ ("sta    %v      ", pointer1);
-
-    /**
-     * Pushes data to the write buffer.
-     * @param type - the type of the data.
-     * @param value - the data.
-     */
-#define BAF_PUSH(type, value)                   \
-    {                                           \
-        *((type*)write_address) = (value);      \
-        write_address += sizeof(type);          \
-    }
-
-    /**
-     * Pushes a function pointer to the write buffer.
-     * @param return_type - the function's return type.
-     * @param argument_types - the function's argument types.
-     * @param pointer - the function pointer/address.
-     */
-#define BAF_PUSH_FUNCTION(return_type, argument_types, pointer)         \
-    {                                                                   \
-        *((return_type(**)(argument_types))write_address) = (pointer);  \
-        write_address += sizeof(return_type(*)(argument_types));        \
-    }
 
     /**
      * Computes the operand of counted instructions.
+     * @param instruction.
+     * @param baf_read_address (global).
      */
-#define BAF_COMPUTE_OPERAND                     \
-    {                                           \
-        operand = 1;                            \
-        while (instruction == *read_address) {  \
-            ++operand;                          \
-            ++read_address;                     \
-        }                                       \
+#define BAF_COMPUTE_OPERAND                         \
+    {                                               \
+        operand = 1;                                \
+        while (instruction == *baf_read_address) {  \
+            ++operand;                              \
+            ++baf_read_address;                     \
+        }                                           \
     }
 
     while (true) {
-        instruction = *(read_address++);
+        instruction = *(baf_read_address++);
 
         switch (instruction) {
             // The null-terminator marks the end of the program.
@@ -196,17 +209,17 @@ static bool baf_compile_first_pass() {
             // to subtract, which is effectively subtraction.
             if ('-' == instruction) operand = -operand;
 
-            // *baf_bfmem += operand;
+            // *cell_memory_pointer += operand;
 
-            //    lda    baf_bfmem
+            //    lda    cell_memory_pointer
             BAF_PUSH(baf_opcode_t, BAF_LDA_ABSOLUTE);
-            BAF_PUSH(baf_cell_t**, &baf_bfmem);
+            BAF_PUSH(baf_cell_t**, baf_cell_memory_pointer);
             //    sta    pointer1
             BAF_PUSH(baf_opcode_t, BAF_STA_ZEROPAGE);
             BAF_PUSH(uint8_t,      pointer1);
-            //    lda    baf_bfmem+1
+            //    lda    cell_memory_pointer+1
             BAF_PUSH(baf_opcode_t, BAF_LDA_ABSOLUTE);
-            BAF_PUSH(baf_cell_t**, (baf_cell_t**)(1+(uint16_t)&baf_bfmem));
+            BAF_PUSH(baf_cell_t**, (baf_cell_t**)(1+(uint16_t)baf_cell_memory_pointer));
             //    sta    pointer1+1
             BAF_PUSH(baf_opcode_t, BAF_STA_ZEROPAGE);
             BAF_PUSH(uint8_t,      1+pointer1);
@@ -230,25 +243,25 @@ static bool baf_compile_first_pass() {
         case '<': {
             BAF_COMPUTE_OPERAND;
 
-            // baf_bfmem -= operand;
+            // cell_memory_pointer -= operand;
 
-            //    lda    baf_bfmem
+            //    lda    cell_memory_pointer
             BAF_PUSH(baf_opcode_t, BAF_LDA_ABSOLUTE);
-            BAF_PUSH(baf_cell_t**, &baf_bfmem);
+            BAF_PUSH(baf_cell_t**, baf_cell_memory_pointer);
             //    sec
             BAF_PUSH(baf_opcode_t, BAF_SEC);
             //    sbc    #operand
             BAF_PUSH(baf_opcode_t, BAF_SBC_IMMEDIATE);
             BAF_PUSH(uint8_t,      operand);
-            //    sta    baf_bfmem
+            //    sta    cell_memory_pointer
             BAF_PUSH(baf_opcode_t, BAF_STA_ABSOLUTE);
-            BAF_PUSH(baf_cell_t**, &baf_bfmem);
+            BAF_PUSH(baf_cell_t**, baf_cell_memory_pointer);
             //    bcs    lno_borrow
             BAF_PUSH(baf_opcode_t, BAF_BCS);
             BAF_PUSH(uint8_t,      3);
-            //    dec    baf_bfmem+1
+            //    dec    cell_memory_pointer+1
             BAF_PUSH(baf_opcode_t, BAF_DEC_ABSOLUTE);
-            BAF_PUSH(baf_cell_t**, (baf_cell_t**)(1 + (uint16_t)&baf_bfmem));
+            BAF_PUSH(baf_cell_t**, (baf_cell_t**)(1 + (uint16_t)baf_cell_memory_pointer));
             // lno_borrow:
         } continue;
 
@@ -256,42 +269,42 @@ static bool baf_compile_first_pass() {
         case '>': {
             BAF_COMPUTE_OPERAND;
 
-            // baf_bfmem += operand;
+            // cell_memory_pointer += operand;
 
             //    lda    #operand
             BAF_PUSH(baf_opcode_t, BAF_LDA_IMMEDIATE);
             BAF_PUSH(uint8_t,      operand);
             //    clc
             BAF_PUSH(baf_opcode_t, BAF_CLC);
-            //    adc    baf_bfmem
+            //    adc    cell_memory_pointer
             BAF_PUSH(baf_opcode_t, BAF_ADC_ABSOLUTE);
-            BAF_PUSH(baf_cell_t**, &baf_bfmem);
-            //    sta    baf_bfmem
+            BAF_PUSH(baf_cell_t**, baf_cell_memory_pointer);
+            //    sta    cell_memory_pointer
             BAF_PUSH(baf_opcode_t, BAF_STA_ABSOLUTE);
-            BAF_PUSH(baf_cell_t**, &baf_bfmem);
+            BAF_PUSH(baf_cell_t**, baf_cell_memory_pointer);
             //    bcc    lno_carry
             BAF_PUSH(baf_opcode_t, BAF_BCC);
             BAF_PUSH(uint8_t,      3);
-            //    inc    baf_bfmem+1
+            //    inc    cell_memory_pointer+1
             BAF_PUSH(baf_opcode_t, BAF_INC_ABSOLUTE);
-            BAF_PUSH(baf_cell_t**, (baf_cell_t**)(1 + (uint16_t)&baf_bfmem));
+            BAF_PUSH(baf_cell_t**, (baf_cell_t**)(1 + (uint16_t)baf_cell_memory_pointer));
             // lno_carry:
         } continue;
 
             // TODO make accept operand.
             // Prints the value of the current cell as a character.
         case '.': {
-            // (void)putchar(*baf_bfmem);
+            // (void)putchar(*cell_memory_pointer);
 
-            //    lda    baf_bfmem
+            //    lda    cell_memory_pointer
             BAF_PUSH(baf_opcode_t, BAF_LDA_ABSOLUTE);
-            BAF_PUSH(baf_cell_t**, &baf_bfmem);
+            BAF_PUSH(baf_cell_t**, baf_cell_memory_pointer);
             //    sta    pointer1
             BAF_PUSH(baf_opcode_t, BAF_STA_ZEROPAGE);
             BAF_PUSH(uint8_t,      pointer1);
-            //    lda    baf_bfmem+1
+            //    lda    cell_memory_pointer+1
             BAF_PUSH(baf_opcode_t, BAF_LDA_ABSOLUTE);
-            BAF_PUSH(baf_cell_t**, (baf_cell_t**)(1+(uint16_t)&baf_bfmem));
+            BAF_PUSH(baf_cell_t**, (baf_cell_t**)(1+(uint16_t)baf_cell_memory_pointer));
             //    sta    pointer1+1
             BAF_PUSH(baf_opcode_t, BAF_STA_ZEROPAGE);
             BAF_PUSH(uint8_t,      1+pointer1);
@@ -312,20 +325,20 @@ static bool baf_compile_first_pass() {
             // Accepts a character from the keyboard and stores its value in the
             // current cell.
         case ',': {
-            // *baf_bfmem = s_wrapped_cgetc();
+            // *baf_cell_memory_pointer = s_wrapped_cgetc();
 
             //    jsr    _s_wrapped_cgetc
             BAF_PUSH(baf_opcode_t, BAF_JSR);
             BAF_PUSH_FUNCTION(uint8_t, void, &s_wrapped_cgetc);
-            //    ldx    baf_bfmem
+            //    ldx    cell_memory_pointer
             BAF_PUSH(baf_opcode_t, BAF_LDX_ABSOLUTE);
-            BAF_PUSH(baf_cell_t**, &baf_bfmem);
+            BAF_PUSH(baf_cell_t**, baf_cell_memory_pointer);
             //    stx    pointer1
             BAF_PUSH(baf_opcode_t, BAF_STX_ZEROPAGE);
             BAF_PUSH(uint8_t,      pointer1);
-            //    ldx    baf_bfmem+1
+            //    ldx    cell_memory_pointer+1
             BAF_PUSH(baf_opcode_t, BAF_LDX_ABSOLUTE);
-            BAF_PUSH(baf_cell_t**, (baf_cell_t**)(1+(uint16_t)&baf_bfmem));
+            BAF_PUSH(baf_cell_t**, (baf_cell_t**)(1+(uint16_t)baf_cell_memory_pointer));
             //    stx    pointer1+1
             BAF_PUSH(baf_opcode_t, BAF_STX_ZEROPAGE);
             BAF_PUSH(uint8_t,      1+pointer1);
@@ -343,17 +356,17 @@ static bool baf_compile_first_pass() {
             // Writes the value at the computer memory pointer's address to the
             // current cell.
         case '@': {
-            // *baf_bfmem = *baf_cmem_pointer;
+            // *cell_memory_pointer = *computer_memory_pointer;
 
-            //    lda    baf_cmem_pointer
+            //    lda    computer_memory_pointer
             BAF_PUSH(baf_opcode_t, BAF_LDA_ABSOLUTE);
-            BAF_PUSH(uint8_t**,    &baf_cmem_pointer);
+            BAF_PUSH(uint8_t**,    baf_computer_memory_pointer);
             //    sta    pointer1
             BAF_PUSH(baf_opcode_t, BAF_STA_ZEROPAGE);
             BAF_PUSH(uint8_t,      pointer1);
-            //    lda    baf_cmem_pointer+1
+            //    lda    computer_memory_pointer+1
             BAF_PUSH(baf_opcode_t, BAF_LDA_ABSOLUTE);
-            BAF_PUSH(uint8_t**,    (uint8_t**)(1+(uint16_t)&baf_cmem_pointer));
+            BAF_PUSH(uint8_t**,    (uint8_t**)(1+(uint16_t)baf_computer_memory_pointer));
             //    sta    pointer1+1
             BAF_PUSH(baf_opcode_t, BAF_STA_ZEROPAGE);
             BAF_PUSH(uint8_t,      1+pointer1);
@@ -363,15 +376,15 @@ static bool baf_compile_first_pass() {
             //    lda    (pointer1),y
             BAF_PUSH(baf_opcode_t, BAF_LDA_INDIRECT_Y);
             BAF_PUSH(uint8_t,      pointer1);
-            //    ldx    baf_bfmem
+            //    ldx    cell_memory_pointer
             BAF_PUSH(baf_opcode_t, BAF_LDX_ABSOLUTE);
-            BAF_PUSH(baf_cell_t**, &baf_bfmem);
+            BAF_PUSH(baf_cell_t**, baf_cell_memory_pointer);
             //    stx    pointer1
             BAF_PUSH(baf_opcode_t, BAF_STX_ZEROPAGE);
             BAF_PUSH(baf_cell_t,   pointer1);
-            //    ldx    baf_bfmem+1
+            //    ldx    cell_memory_pointer+1
             BAF_PUSH(baf_opcode_t, BAF_LDX_ABSOLUTE);
-            BAF_PUSH(baf_cell_t**, (baf_cell_t**)(1+(uint16_t)&baf_bfmem));
+            BAF_PUSH(baf_cell_t**, (baf_cell_t**)(1+(uint16_t)baf_cell_memory_pointer));
             //    stx    pointer1+1
             BAF_PUSH(baf_opcode_t, BAF_STX_ZEROPAGE);
             BAF_PUSH(baf_cell_t,   1+pointer1);
@@ -383,17 +396,17 @@ static bool baf_compile_first_pass() {
             // Writes the value of the current cell to the computer memory
             // pointer's address.
         case '*': {
-            // *baf_cmem_pointer = *baf_bfmem;
+            // *computer_memory_pointer = *cell_memory_pointer;
 
-            //    lda    baf_bfmem
+            //    lda    cell_memory_pointer
             BAF_PUSH(baf_opcode_t, BAF_LDA_ABSOLUTE);
-            BAF_PUSH(baf_cell_t**, &baf_bfmem);
+            BAF_PUSH(baf_cell_t**, baf_cell_memory_pointer);
             //    sta    pointer1
             BAF_PUSH(baf_opcode_t, BAF_STA_ZEROPAGE);
             BAF_PUSH(uint8_t,      pointer1);
-            //    lda    baf_bfmem+1
+            //    lda    cell_memory_pointer+1
             BAF_PUSH(baf_opcode_t, BAF_LDA_ABSOLUTE);
-            BAF_PUSH(baf_cell_t**, (baf_cell_t**)(1+(uint16_t)&baf_bfmem));
+            BAF_PUSH(baf_cell_t**, (baf_cell_t**)(1+(uint16_t)baf_cell_memory_pointer));
             //    sta    pointer1+1
             BAF_PUSH(baf_opcode_t, BAF_STA_ZEROPAGE);
             BAF_PUSH(uint8_t,      1+pointer1);
@@ -403,15 +416,15 @@ static bool baf_compile_first_pass() {
             //    lda    (pointer1),y
             BAF_PUSH(baf_opcode_t, BAF_LDA_INDIRECT_Y);
             BAF_PUSH(uint8_t,      pointer1);
-            //    ldx    baf_cmem_pointer
+            //    ldx    computer_memory_pointer
             BAF_PUSH(baf_opcode_t, BAF_LDX_ABSOLUTE);
-            BAF_PUSH(uint8_t**,    &baf_cmem_pointer);
+            BAF_PUSH(uint8_t**,    baf_computer_memory_pointer);
             //    stx    pointer1
             BAF_PUSH(baf_opcode_t, BAF_STX_ZEROPAGE);
             BAF_PUSH(uint8_t,      pointer1);
-            //    ldx    baf_cmem_pointer+1
+            //    ldx    computer_memory_pointer+1
             BAF_PUSH(baf_opcode_t, BAF_LDX_ABSOLUTE);
-            BAF_PUSH(uint8_t**,    (uint8_t**)(1+(uint16_t)&baf_cmem_pointer));
+            BAF_PUSH(uint8_t**,    (uint8_t**)(1+(uint16_t)baf_computer_memory_pointer));
             //    stx    pointer1+1
             BAF_PUSH(baf_opcode_t, BAF_STX_ZEROPAGE);
             BAF_PUSH(uint8_t,      1+pointer1);
@@ -424,25 +437,25 @@ static bool baf_compile_first_pass() {
         case '(': {
             BAF_COMPUTE_OPERAND;
 
-            // baf_cmem_pointer -= operand;
+            // computer_memory_pointer -= operand;
 
-            //    lda    baf_cmem_pointer
+            //    lda    computer_memory_pointer
             BAF_PUSH(baf_opcode_t, BAF_LDA_ABSOLUTE);
-            BAF_PUSH(uint8_t**,    &baf_cmem_pointer);
+            BAF_PUSH(uint8_t**,    baf_computer_memory_pointer);
             //    sec
             BAF_PUSH(baf_opcode_t, BAF_SEC);
             //    sbc    #operand
             BAF_PUSH(baf_opcode_t, BAF_SBC_IMMEDIATE);
             BAF_PUSH(uint8_t,      operand);
-            //    sta    baf_cmem_pointer
+            //    sta    computer_memory_pointer
             BAF_PUSH(baf_opcode_t, BAF_STA_ABSOLUTE);
-            BAF_PUSH(uint8_t**,    &baf_cmem_pointer);
+            BAF_PUSH(uint8_t**,    baf_computer_memory_pointer);
             //    bcs    lno_borrow
             BAF_PUSH(baf_opcode_t, BAF_BCS);
             BAF_PUSH(uint8_t,      3);
-            //    dec    baf_cmem_pointer+1
+            //    dec    computer_memory_pointer+1
             BAF_PUSH(baf_opcode_t, BAF_DEC_ABSOLUTE);
-            BAF_PUSH(uint8_t**,    (uint8_t**)(1 + (uint16_t)&baf_cmem_pointer));
+            BAF_PUSH(uint8_t**,    (uint8_t**)(1 + (uint16_t)baf_computer_memory_pointer));
             // lno_borrow:
         } continue;
 
@@ -450,25 +463,25 @@ static bool baf_compile_first_pass() {
         case ')': {
             BAF_COMPUTE_OPERAND;
 
-            // baf_cmem_pointer += operand;
+            // computer_memory_pointer += operand;
 
             //    lda    #operand
             BAF_PUSH(baf_opcode_t, BAF_LDA_IMMEDIATE);
             BAF_PUSH(uint8_t,      operand);
             //    clc
             BAF_PUSH(baf_opcode_t, BAF_CLC);
-            //    adc    baf_cmem_pointer
+            //    adc    computer_memory_pointer
             BAF_PUSH(baf_opcode_t, BAF_ADC_ABSOLUTE);
-            BAF_PUSH(uint8_t**,    &baf_cmem_pointer);
-            //    sta    baf_cmem_pointer
+            BAF_PUSH(uint8_t**,    baf_computer_memory_pointer);
+            //    sta    computer_memory_pointer
             BAF_PUSH(baf_opcode_t, BAF_STA_ABSOLUTE);
-            BAF_PUSH(uint8_t**,    &baf_cmem_pointer);
+            BAF_PUSH(uint8_t**,    baf_computer_memory_pointer);
             //    bcc    lno_carry
             BAF_PUSH(baf_opcode_t, BAF_BCC);
             BAF_PUSH(uint8_t,      3);
-            //    inc    baf_cmem_pointer+1
+            //    inc    computer_memory_pointer+1
             BAF_PUSH(baf_opcode_t, BAF_INC_ABSOLUTE);
-            BAF_PUSH(uint8_t**,    (uint8_t**)(1 + (uint16_t)&baf_cmem_pointer));
+            BAF_PUSH(uint8_t**,    (uint8_t**)(1 + (uint16_t)baf_computer_memory_pointer));
             // lno_carry:
         } continue;
 
@@ -482,17 +495,15 @@ static bool baf_compile_first_pass() {
 
     return true;
 
-    // We undefine these macros since they only make sense within the context of
+    // We undefine this macro since they only make sense within the context of
     // this function.
-#undef BAF_PUSH
 #undef BAF_COMPUTE_OPERAND
-#undef BAF_PUSH_FUNCTION
 }
 
 /**
  * Performs the second pass of BASICfuck compilation, calculating the addresses
  * for jump instructions.
- *
+ * TODO update documentation.
  * @param baf_compiler_write_buffer (global) - the write buffer.
  * @return true if succeeded, false if there is an unterminated loop.
  */
@@ -554,7 +565,17 @@ static bool baf_compile_second_pass() {
     return true;
 }
 
-BAFCompileResult baf_compile() {
+BAFCompileResult baf_compile(const BAFCompiler* compiler) {
+    // Global variable function parameter passing.
+    baf_read_address            = compiler->read_buffer;
+    baf_write_address           = compiler->write_buffer;
+    baf_cell_memory_pointer     = compiler->cell_memory_pointer;
+    baf_computer_memory_pointer = compiler->computer_memory_pointer;
+    // We can't access assembly variables directly from C, so instead we use a
+    // little inline assembly to copy it to a C variable.
+    __asm__ ("lda    #<(ptr1)"          );
+    __asm__ ("sta    %v      ", pointer1);
+
     if (!baf_compile_first_pass())
         return BAF_COMPILE_OUT_OF_MEMORY;
 
@@ -620,14 +641,6 @@ BAFCompileResult baf_compile() {
 /*             program_index = (uint16_t)argument */
 /*                           + ((uint16_t)baf_interpreter_program_memory[program_index+2] << 8); */
 /*         } */
-/*         goto lfinish_interpreter_cycle; */
-
-/*     lopcode_cmem_read: */
-/*         baf_interpreter_bfmem[baf_interpreter_bfmem_index] = *baf_interpreter_cmem_pointer; */
-/*         goto lfinish_interpreter_cycle; */
-
-/*     lopcode_cmem_write: */
-/*         *baf_interpreter_cmem_pointer = baf_interpreter_bfmem[baf_interpreter_bfmem_index]; */
 /*         goto lfinish_interpreter_cycle; */
 
 /*     lopcode_execute: */
