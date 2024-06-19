@@ -107,6 +107,12 @@ BAFCompileResult baf_compile(const BAFCompiler* compiler);
 #include <assert.h>
 
 /**
+ * The first pointer register allocated by cc65. Used for indirect
+ * addressing. Zero page address.
+ */
+static uint8_t pointer1 = NULL;
+
+/**
  * A pointer to the variable to use as the pointer into cell memory in the
  * the generated code.
  */
@@ -155,11 +161,33 @@ static baf_opcode_t* baf_write_address = NULL;
     }
 
 /**
- * The first pointer register allocated by cc65. Used for indirect
- * addressing. Zero page address.
+ * Creates a function to push the instructions required to set up the
+ * dereference of the given pointer. After calling, the pointer will be loaded
+ * into the first pointer register and can be dereferenced with 'st<register>
+ * (pointer1),y' or 'ld<register> (pointer1),y'.
+ * Clobbers the <register> register.
+ * @param register - the register to use to load the pointer into the zeropage.
+ * @param address - the address of the pointer.
+ * @param baf_write_address (global).
+ * @param pointer1 (global).
  */
-static uint8_t pointer1 = NULL;
-
+#define BAF_PUSH_DEREFERNCE_FUNCTION(register)                       \
+    static void baf_push_dereference_##register(uint8_t** address) { \
+        /*    ld<register>    address */                             \
+        BAF_PUSH(baf_opcode_t, BAF_LD##register##_ABSOLUTE);         \
+        BAF_PUSH(uint8_t**,    address);                             \
+        /*    st<register>    pointer1 */                            \
+        BAF_PUSH(baf_opcode_t, BAF_ST##register##_ZEROPAGE);         \
+        BAF_PUSH(uint8_t,      pointer1);                            \
+        /*    ld<register>    address+1 */                           \
+        BAF_PUSH(baf_opcode_t, BAF_LD##register##_ABSOLUTE);         \
+        BAF_PUSH(uint8_t**,    (uint8_t**)(1+(uint16_t)address));    \
+        /*    st<register>    pointer1+1 */                          \
+        BAF_PUSH(baf_opcode_t, BAF_ST##register##_ZEROPAGE);         \
+        BAF_PUSH(uint8_t,      1+pointer1);                          \
+    }
+BAF_PUSH_DEREFERNCE_FUNCTION(A)
+BAF_PUSH_DEREFERNCE_FUNCTION(X)
 
 // TODO add bounds checking.
 // TODO add abiltiy to abort program.
@@ -211,21 +239,11 @@ static bool baf_compile_first_pass() {
 
             // *cell_memory_pointer += operand;
 
-            //    lda    cell_memory_pointer
-            BAF_PUSH(baf_opcode_t, BAF_LDA_ABSOLUTE);
-            BAF_PUSH(baf_cell_t**, baf_cell_memory_pointer);
-            //    sta    pointer1
-            BAF_PUSH(baf_opcode_t, BAF_STA_ZEROPAGE);
-            BAF_PUSH(uint8_t,      pointer1);
-            //    lda    cell_memory_pointer+1
-            BAF_PUSH(baf_opcode_t, BAF_LDA_ABSOLUTE);
-            BAF_PUSH(baf_cell_t**, (baf_cell_t**)(1+(uint16_t)baf_cell_memory_pointer));
-            //    sta    pointer1+1
-            BAF_PUSH(baf_opcode_t, BAF_STA_ZEROPAGE);
-            BAF_PUSH(uint8_t,      1+pointer1);
             //    ldy    #$00
             BAF_PUSH(baf_opcode_t, BAF_LDY_IMMEDIATE);
-            BAF_PUSH(uint8_t, 0);
+            BAF_PUSH(uint8_t,      0);
+            //    *cell_memory_pointer
+            baf_push_dereference_A(baf_cell_memory_pointer);
             //    lda    (pointer1),y
             BAF_PUSH(baf_opcode_t, BAF_LDA_INDIRECT_Y);
             BAF_PUSH(uint8_t,      pointer1);
@@ -233,7 +251,7 @@ static bool baf_compile_first_pass() {
             BAF_PUSH(baf_opcode_t, BAF_CLC);
             //    adc    #operand
             BAF_PUSH(baf_opcode_t, BAF_ADC_IMMEDIATE);
-            BAF_PUSH(uint8_t, operand);
+            BAF_PUSH(uint8_t,      operand);
             //    sta    (pointer1),y
             BAF_PUSH(baf_opcode_t, BAF_STA_INDIRECT_Y);
             BAF_PUSH(uint8_t,      pointer1);
@@ -291,26 +309,15 @@ static bool baf_compile_first_pass() {
             // lno_carry:
         } continue;
 
-            // TODO make accept operand.
             // Prints the value of the current cell as a character.
         case '.': {
             // (void)putchar(*cell_memory_pointer);
 
-            //    lda    cell_memory_pointer
-            BAF_PUSH(baf_opcode_t, BAF_LDA_ABSOLUTE);
-            BAF_PUSH(baf_cell_t**, baf_cell_memory_pointer);
-            //    sta    pointer1
-            BAF_PUSH(baf_opcode_t, BAF_STA_ZEROPAGE);
-            BAF_PUSH(uint8_t,      pointer1);
-            //    lda    cell_memory_pointer+1
-            BAF_PUSH(baf_opcode_t, BAF_LDA_ABSOLUTE);
-            BAF_PUSH(baf_cell_t**, (baf_cell_t**)(1+(uint16_t)baf_cell_memory_pointer));
-            //    sta    pointer1+1
-            BAF_PUSH(baf_opcode_t, BAF_STA_ZEROPAGE);
-            BAF_PUSH(uint8_t,      1+pointer1);
             //    ldy    #$00
             BAF_PUSH(baf_opcode_t, BAF_LDY_IMMEDIATE);
-            BAF_PUSH(uint8_t, 0);
+            BAF_PUSH(uint8_t,      0);
+            //    *cell_memory_pointer
+            baf_push_dereference_A(baf_cell_memory_pointer);
             //    lda    (pointer1),y
             BAF_PUSH(baf_opcode_t, BAF_LDA_INDIRECT_Y);
             BAF_PUSH(uint8_t,      pointer1);
@@ -330,21 +337,11 @@ static bool baf_compile_first_pass() {
             //    jsr    _s_wrapped_cgetc
             BAF_PUSH(baf_opcode_t, BAF_JSR);
             BAF_PUSH_FUNCTION(uint8_t, void, &s_wrapped_cgetc);
-            //    ldx    cell_memory_pointer
-            BAF_PUSH(baf_opcode_t, BAF_LDX_ABSOLUTE);
-            BAF_PUSH(baf_cell_t**, baf_cell_memory_pointer);
-            //    stx    pointer1
-            BAF_PUSH(baf_opcode_t, BAF_STX_ZEROPAGE);
-            BAF_PUSH(uint8_t,      pointer1);
-            //    ldx    cell_memory_pointer+1
-            BAF_PUSH(baf_opcode_t, BAF_LDX_ABSOLUTE);
-            BAF_PUSH(baf_cell_t**, (baf_cell_t**)(1+(uint16_t)baf_cell_memory_pointer));
-            //    stx    pointer1+1
-            BAF_PUSH(baf_opcode_t, BAF_STX_ZEROPAGE);
-            BAF_PUSH(uint8_t,      1+pointer1);
             //    ldy    #$00
             BAF_PUSH(baf_opcode_t, BAF_LDY_IMMEDIATE);
             BAF_PUSH(uint8_t, 0);
+            //    *cell_memory_pointer
+            baf_push_dereference_X(baf_cell_memory_pointer);
             //    sta    (pointer1),y
             BAF_PUSH(baf_opcode_t, BAF_STA_INDIRECT_Y);
             BAF_PUSH(uint8_t,      pointer1);
@@ -358,36 +355,16 @@ static bool baf_compile_first_pass() {
         case '@': {
             // *cell_memory_pointer = *computer_memory_pointer;
 
-            //    lda    computer_memory_pointer
-            BAF_PUSH(baf_opcode_t, BAF_LDA_ABSOLUTE);
-            BAF_PUSH(uint8_t**,    baf_computer_memory_pointer);
-            //    sta    pointer1
-            BAF_PUSH(baf_opcode_t, BAF_STA_ZEROPAGE);
-            BAF_PUSH(uint8_t,      pointer1);
-            //    lda    computer_memory_pointer+1
-            BAF_PUSH(baf_opcode_t, BAF_LDA_ABSOLUTE);
-            BAF_PUSH(uint8_t**,    (uint8_t**)(1+(uint16_t)baf_computer_memory_pointer));
-            //    sta    pointer1+1
-            BAF_PUSH(baf_opcode_t, BAF_STA_ZEROPAGE);
-            BAF_PUSH(uint8_t,      1+pointer1);
             //    ldy    #$00
             BAF_PUSH(baf_opcode_t, BAF_LDY_IMMEDIATE);
             BAF_PUSH(uint8_t,      0);
+            //    *computer_memory_pointer
+            baf_push_dereference_A(baf_computer_memory_pointer);
             //    lda    (pointer1),y
             BAF_PUSH(baf_opcode_t, BAF_LDA_INDIRECT_Y);
             BAF_PUSH(uint8_t,      pointer1);
-            //    ldx    cell_memory_pointer
-            BAF_PUSH(baf_opcode_t, BAF_LDX_ABSOLUTE);
-            BAF_PUSH(baf_cell_t**, baf_cell_memory_pointer);
-            //    stx    pointer1
-            BAF_PUSH(baf_opcode_t, BAF_STX_ZEROPAGE);
-            BAF_PUSH(baf_cell_t,   pointer1);
-            //    ldx    cell_memory_pointer+1
-            BAF_PUSH(baf_opcode_t, BAF_LDX_ABSOLUTE);
-            BAF_PUSH(baf_cell_t**, (baf_cell_t**)(1+(uint16_t)baf_cell_memory_pointer));
-            //    stx    pointer1+1
-            BAF_PUSH(baf_opcode_t, BAF_STX_ZEROPAGE);
-            BAF_PUSH(baf_cell_t,   1+pointer1);
+            //    *computer_memory_pointer
+            baf_push_dereference_X(baf_cell_memory_pointer);
             //    sta    (pointer1),y
             BAF_PUSH(baf_opcode_t, BAF_STA_INDIRECT_Y);
             BAF_PUSH(baf_cell_t,   pointer1);
@@ -398,36 +375,16 @@ static bool baf_compile_first_pass() {
         case '*': {
             // *computer_memory_pointer = *cell_memory_pointer;
 
-            //    lda    cell_memory_pointer
-            BAF_PUSH(baf_opcode_t, BAF_LDA_ABSOLUTE);
-            BAF_PUSH(baf_cell_t**, baf_cell_memory_pointer);
-            //    sta    pointer1
-            BAF_PUSH(baf_opcode_t, BAF_STA_ZEROPAGE);
-            BAF_PUSH(uint8_t,      pointer1);
-            //    lda    cell_memory_pointer+1
-            BAF_PUSH(baf_opcode_t, BAF_LDA_ABSOLUTE);
-            BAF_PUSH(baf_cell_t**, (baf_cell_t**)(1+(uint16_t)baf_cell_memory_pointer));
-            //    sta    pointer1+1
-            BAF_PUSH(baf_opcode_t, BAF_STA_ZEROPAGE);
-            BAF_PUSH(uint8_t,      1+pointer1);
             //    ldy    #$00
             BAF_PUSH(baf_opcode_t, BAF_LDY_IMMEDIATE);
             BAF_PUSH(uint8_t,      0);
+            //    *cell_memory_pointer
+            baf_push_dereference_A(baf_cell_memory_pointer);
             //    lda    (pointer1),y
             BAF_PUSH(baf_opcode_t, BAF_LDA_INDIRECT_Y);
             BAF_PUSH(uint8_t,      pointer1);
-            //    ldx    computer_memory_pointer
-            BAF_PUSH(baf_opcode_t, BAF_LDX_ABSOLUTE);
-            BAF_PUSH(uint8_t**,    baf_computer_memory_pointer);
-            //    stx    pointer1
-            BAF_PUSH(baf_opcode_t, BAF_STX_ZEROPAGE);
-            BAF_PUSH(uint8_t,      pointer1);
-            //    ldx    computer_memory_pointer+1
-            BAF_PUSH(baf_opcode_t, BAF_LDX_ABSOLUTE);
-            BAF_PUSH(uint8_t**,    (uint8_t**)(1+(uint16_t)baf_computer_memory_pointer));
-            //    stx    pointer1+1
-            BAF_PUSH(baf_opcode_t, BAF_STX_ZEROPAGE);
-            BAF_PUSH(uint8_t,      1+pointer1);
+            //    *computer_memory_pointer
+            baf_push_dereference_X(baf_computer_memory_pointer);
             //    sta    (pointer1),y
             BAF_PUSH(baf_opcode_t, BAF_STA_INDIRECT_Y);
             BAF_PUSH(uint8_t,      pointer1);
