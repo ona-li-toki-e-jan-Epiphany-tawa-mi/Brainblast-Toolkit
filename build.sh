@@ -118,7 +118,7 @@ for TARGET in $TARGETS; do
         assembly=${SOURCE%.c}.s; assembly=${assembly#"${SOURCE_DIRECTORY}/"}
         set -x
         # shellcheck disable=SC2086,SC2090 # We want word splitting.
-        $CC $ALL_CFLAGS -S -o "$assembly" "$SOURCE" || exit 1
+        $CC $ALL_CFLAGS -g -S -o "$assembly" "$SOURCE" || exit 1
 
     elif [ run = "$1" ]; then
         set -x
