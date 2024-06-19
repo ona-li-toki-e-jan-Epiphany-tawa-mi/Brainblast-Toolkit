@@ -88,7 +88,7 @@ typedef uint8_t BAFCompileResult;
 #define BAF_COMPILE_OUT_OF_MEMORY     1U
 #define BAF_COMPILE_UNTERMINATED_LOOP 2U
 /**
- * Bytecode compiles BASICfuck code.
+ * Compiles BASICfuck code to 6502 machine code.
  * @param compiler.
  * @return BAF_COMPILE_SUCCESS on success,
  *         BAF_COMPILE_OUT_OF_MEMORY if the program exceeded the size of the
@@ -107,10 +107,14 @@ BAFCompileResult baf_compile(const BAFCompiler* compiler);
 #include <assert.h>
 
 /**
- * The first pointer register allocated by cc65. Used for indirect
- * addressing. Zero page address.
+ * Zero page addresses.
  */
-static uint8_t pointer1 = NULL;
+typedef uint8_t baf_zeropage_t;
+/**
+ * The first pointer register allocated by cc65. Used for indirect
+ * addressing.
+ */
+static baf_zeropage_t pointer1 = NULL;
 
 /**
  * A pointer to the variable to use as the pointer into cell memory in the
@@ -140,7 +144,7 @@ static baf_opcode_t* baf_write_address = NULL;
  * Pushes data to the write buffer.
  * @param type - the type of the data.
  * @param value - the data.
- * @param baf_write_address (global) - the current write address.
+ * @param baf_write_address (global).
  */
 #define BAF_PUSH(type, value)                                           \
     {                                                                   \
@@ -174,17 +178,17 @@ static baf_opcode_t* baf_write_address = NULL;
 #define BAF_PUSH_DEREFERNCE_FUNCTION(register)                       \
     static void baf_push_dereference_##register(uint8_t** address) { \
         /*    ld<register>    address */                             \
-        BAF_PUSH(baf_opcode_t, BAF_LD##register##_ABSOLUTE);         \
-        BAF_PUSH(uint8_t**,    address);                             \
+        BAF_PUSH(baf_opcode_t,   BAF_LD##register##_ABSOLUTE);       \
+        BAF_PUSH(uint8_t**,      address);                           \
         /*    st<register>    pointer1 */                            \
-        BAF_PUSH(baf_opcode_t, BAF_ST##register##_ZEROPAGE);         \
-        BAF_PUSH(uint8_t,      pointer1);                            \
+        BAF_PUSH(baf_opcode_t,   BAF_ST##register##_ZEROPAGE);       \
+        BAF_PUSH(baf_zeropage_t, pointer1);                          \
         /*    ld<register>    address+1 */                           \
-        BAF_PUSH(baf_opcode_t, BAF_LD##register##_ABSOLUTE);         \
-        BAF_PUSH(uint8_t**,    (uint8_t**)(1+(uint16_t)address));    \
+        BAF_PUSH(baf_opcode_t,   BAF_LD##register##_ABSOLUTE);       \
+        BAF_PUSH(uint8_t**,      (uint8_t**)(1+(uint16_t)address));  \
         /*    st<register>    pointer1+1 */                          \
-        BAF_PUSH(baf_opcode_t, BAF_ST##register##_ZEROPAGE);         \
-        BAF_PUSH(uint8_t,      1+pointer1);                          \
+        BAF_PUSH(baf_opcode_t,   BAF_ST##register##_ZEROPAGE);       \
+        BAF_PUSH(baf_zeropage_t, 1+pointer1);                        \
     }
 BAF_PUSH_DEREFERNCE_FUNCTION(A)
 BAF_PUSH_DEREFERNCE_FUNCTION(X)
@@ -196,6 +200,7 @@ BAF_PUSH_DEREFERNCE_FUNCTION(X)
  * to machine code.
  * @param baf_read_address (global).
  * @param baf_write_address (global).
+ * @param pointer1 (global).
  * @return true if succeeded, false if ran out of memory.
  */
 static bool baf_compile_first_pass() {
@@ -452,7 +457,7 @@ static bool baf_compile_first_pass() {
 
     return true;
 
-    // We undefine this macro since they only make sense within the context of
+    // We undefine this macro since it only makes sense within the context of
     // this function.
 #undef BAF_COMPUTE_OPERAND
 }
