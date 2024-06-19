@@ -45,14 +45,17 @@ typedef uint8_t baf_opcode_t;
 #define BAF_ADC_IMMEDIATE  0x69
 #define BAF_BCC            0x90
 #define BAF_BCS            0xB0
+#define BAF_BEQ            0xF0
 #define BAF_BNE            0xD0
 #define BAF_BVC            0x50
 #define BAF_BVC            0x50
 #define BAF_CLC            0x18
+#define BAF_CMP_IMMEDIATE  0xC9
 #define BAF_DEC_ABSOLUTE   0xCE
 #define BAF_DEX            0xCA
 #define BAF_INC_ABSOLUTE   0xEE
 #define BAF_JSR            0x20
+#define BAF_JMP_ABSOLUTE   0x4C
 #define BAF_LDA_ABSOLUTE   0xAD
 #define BAF_LDA_IMMEDIATE  0xA9
 #define BAF_LDA_INDIRECT_Y 0xB1
@@ -75,6 +78,7 @@ typedef struct {
     const uint8_t* read_buffer;
     // Buffer to write the generated 6502 machine code to.
     baf_opcode_t*  write_buffer;
+    uint16_t       write_buffer_size;
     // A pointer to the variable to use as the pointer into cell memory in the
     // generated code.
     baf_cell_t**   cell_memory_pointer;
@@ -146,7 +150,8 @@ static const uint8_t* baf_read_address = NULL;
  * initialized prior to calls to the compilation leaf-functions, and is
  * clobbered by them.
  */
-static baf_opcode_t* baf_write_address = NULL;
+static baf_opcode_t* baf_write_address     = NULL;
+static uint16_t      baf_write_buffer_size = 0;
 /**
  * Pushes data to the write buffer.
  * @param type - the type of the data.
@@ -170,6 +175,11 @@ static baf_opcode_t* baf_write_address = NULL;
         *((return_type(**)(argument_types))baf_write_address) = (pointer); \
         baf_write_address += sizeof(return_type(*)(argument_types));       \
     }
+// The first pass of the needs to insert placeholder instructions + a null
+// address to mark where the jumps are for the second pass. Both of these
+// opcodes are unused in the 6502.
+#define BAF_JEQ_PLACEHOLDER 0xDA
+#define BAF_JNE_PLACEHOLDER 0xDB
 
 /**
  * Creates a function to push the instructions required to set up the
@@ -362,7 +372,38 @@ static bool baf_compile_first_pass() {
         } continue;
 
         case '[':
-        case ']': assert(false && "TODO");
+        case ']': {
+            // if (0 == *cell_memory_pointer) goto lmatching_jne;
+            // OR
+            // if (0 != *cell_memory_pointer) goto lmatching_jeq;
+
+            //    ldy    #$00
+            BAF_PUSH(baf_opcode_t, BAF_LDY_IMMEDIATE);
+            BAF_PUSH(uint8_t,      0);
+            //    *cell_memory_pointer
+            baf_push_dereference_A(baf_cell_memory_pointer);
+            //    lda    (pointer1),y
+            BAF_PUSH(baf_opcode_t, BAF_LDA_INDIRECT_Y);
+            BAF_PUSH(uint8_t,      pointer1);
+            //    cmp    #$00
+            BAF_PUSH(baf_opcode_t, BAF_CMP_IMMEDIATE);
+            BAF_PUSH(uint8_t,      0);
+            if ('[' == instruction) {
+                //    beq    lno_jump
+                BAF_PUSH(baf_opcode_t, BAF_BNE);
+                BAF_PUSH(uint8_t,      3);
+                //    jmp    lmatching_jne
+                BAF_PUSH(baf_opcode_t, BAF_JEQ_PLACEHOLDER);
+            } else {
+                //    bne    lno_jump
+                BAF_PUSH(baf_opcode_t, BAF_BEQ);
+                BAF_PUSH(uint8_t,      3);
+                //    jmp    lmatching_jeq
+                BAF_PUSH(baf_opcode_t, BAF_JNE_PLACEHOLDER);
+            }
+            BAF_PUSH(baf_opcode_t**, NULL);
+            // lno_jump:
+        } continue;
 
             // Writes the value at the computer memory pointer's address to the
             // current cell.
@@ -476,64 +517,112 @@ static bool baf_compile_first_pass() {
 /**
  * Performs the second pass of BASICfuck compilation, calculating the addresses
  * for jump instructions.
- * TODO update documentation.
- * @param baf_compiler_write_buffer (global) - the write buffer.
+ * @param baf_write_address (global).
+ * @param baf_write_buffer_size (global).
  * @return true if succeeded, false if there is an unterminated loop.
  */
 static bool baf_compile_second_pass() {
-    return true;
-    /* uint16_t     loop_depth; */
-    /* uint16_t     seek_index; */
-    /* baf_opcode_t opcode, seeked_opcode; */
+    baf_opcode_t* seek_address = NULL;
+    uint8_t       loop_depth   = 0;
 
-    /* baf_compiler_write_index = 0; */
+    baf_opcode_t* write_buffer_start = baf_write_address;
+    // We subtract 3 because JEQ and JNE take up 3 bytes each.
+    baf_opcode_t* write_buffer_end = baf_write_address + baf_write_buffer_size - 3;
 
+    // Calculates addresses of paring JEQ and JNE instructions.
+    while (baf_write_address < write_buffer_end) {
+        switch (*baf_write_address) {
+        case BAF_JEQ_PLACEHOLDER: {
+            // If there is no null pointer after the placeholder, then this is
+            // just some random value.
+            if (NULL != *BAF_INCREMENT_POINTER(baf_opcode_t**, baf_write_address)) {
+                ++baf_write_address;
+                continue;
+            }
 
-    /* while ((opcode = baf_compiler_write_buffer[baf_compiler_write_index]) != BAF_OPCODE_HALT) { */
-    /*     switch (opcode) { */
-    /*     case BAF_OPCODE_JEQ: */
-    /*         seek_index = baf_compiler_write_index + baf_opcode_size_table[BAF_OPCODE_JEQ]; */
-    /*         loop_depth = 1; */
+            // Loop to find paring JNE.
+            seek_address = 3 + baf_write_address;
+            loop_depth   = 1;
+            while (seek_address < write_buffer_end) {
+                switch (*seek_address) {
+                case BAF_JEQ_PLACEHOLDER: {
+                    if (NULL != *BAF_INCREMENT_POINTER(baf_opcode_t**, seek_address)) {
+                        ++seek_address;
+                        continue;
+                    }
+                    ++loop_depth;
+                    seek_address += 3;
+                } break;
+                case BAF_JNE_PLACEHOLDER: {
+                    if (NULL != *BAF_INCREMENT_POINTER(baf_opcode_t**, seek_address)) {
+                        ++seek_address;
+                        continue;
+                    }
+                    --loop_depth;
+                    seek_address += 3;
+                } break;
+                default: ++seek_address; continue;
+                }
 
-    /*         // Finds and links with accomanying JNE instruction. */
-    /*         while ((seeked_opcode = baf_compiler_write_buffer[seek_index]) != BAF_OPCODE_HALT) { */
-    /*             switch (seeked_opcode) { */
-    /*             case BAF_OPCODE_JEQ: */
-    /*                 ++loop_depth; */
-    /*                 break; */
-    /*             case BAF_OPCODE_JNE: */
-    /*                 --loop_depth; */
-    /*                 break; */
-    /*             } */
+                if (0 == loop_depth) {
+                    // Sets JEQ instruction to jump to accompanying JNE.
+                    *BAF_INCREMENT_POINTER(baf_opcode_t**, baf_write_address) = seek_address;
+                    // Sets JNE instruction to jump to accompanying JEQ.
+                    // Add/subtract 3 from previous switch.
+                    *BAF_INCREMENT_POINTER(baf_opcode_t**, seek_address-3) = 3 + baf_write_address;
+                    break;
+                }
+            }
 
-    /*             if (loop_depth == 0) { */
-    /*                 // Sets JEQ instruction to jump to accomanying JNE. */
-    /*                 *(uint16_t*)(baf_compiler_write_buffer + baf_compiler_write_index+1) = seek_index; */
-    /*                 // And vice-versa. */
-    /*                 *(uint16_t*)(baf_compiler_write_buffer + seek_index+1) = baf_compiler_write_index; */
+            baf_write_address += 3;
+        } break;
 
-    /*                 break; */
-    /*             } */
+        case BAF_JNE_PLACEHOLDER: {
+            // If there is no null pointer after the placeholder, then this is
+            // just some random value.
+            if (NULL != *BAF_INCREMENT_POINTER(baf_opcode_t**, baf_write_address)) {
+                ++baf_write_address;
+                continue;
+            }
 
-    /*             seek_index += baf_opcode_size_table[seeked_opcode]; */
-    /*         } */
+            baf_write_address += 3;
+        } break;
 
-    /*         if (loop_depth != 0) */
-    /*             return false; */
+        default: ++baf_write_address; break;
+        }
+    }
 
-    /*         break; */
+    baf_write_address = write_buffer_start;
 
-    /*     case BAF_OPCODE_JNE: */
-    /*         // Address should have been set by some preceeding JEQ instruction. */
-    /*         if (*(uint16_t*)(baf_compiler_write_buffer + baf_compiler_write_index+1) == 0xFFFF) */
-    /*             return false; */
+    // Changes placeholder instructions to JMP and asserts that all JEQs have a
+    // pairing JNE and vice-versa.
+    while (baf_write_address < write_buffer_end) {
+        switch (*baf_write_address) {
+        case BAF_JEQ_PLACEHOLDER: {
+            // If there is a null pointer after the placeholder, then there are
+            // unmatched JNE and JEQ.
+            if (NULL == *BAF_INCREMENT_POINTER(baf_opcode_t**, baf_write_address)) {
+                return false;
+            }
 
-    /*         break; */
-    /*     } */
+            *baf_write_address = BAF_JMP_ABSOLUTE;
+            baf_write_address += 3;
+        } break;
 
-    /*     baf_compiler_write_index += baf_opcode_size_table[opcode]; */
-    /* } */
+        case BAF_JNE_PLACEHOLDER: {
+            // If there is a null pointer after the placeholder, then there are
+            // unmatched JNE and JEQ.
+            if (NULL == *BAF_INCREMENT_POINTER(baf_opcode_t**, baf_write_address)) {
+                return false;
+            }
 
+            *baf_write_address = BAF_JMP_ABSOLUTE;
+            baf_write_address += 3;
+        } break;
+
+        default: ++baf_write_address; break;
+        }
+    }
 
     return true;
 }
@@ -542,6 +631,7 @@ BAFCompileResult baf_compile(const BAFCompiler* compiler) {
     // Global variable function parameter passing.
     baf_read_address            = compiler->read_buffer;
     baf_write_address           = compiler->write_buffer;
+    baf_write_buffer_size       = compiler->write_buffer_size;
     baf_cell_memory_pointer     = compiler->cell_memory_pointer;
     baf_computer_memory_pointer = compiler->computer_memory_pointer;
     // We can't access assembly variables directly from C, so instead we use a
@@ -549,8 +639,15 @@ BAFCompileResult baf_compile(const BAFCompiler* compiler) {
     __asm__ ("lda    #<(ptr1)"          );
     __asm__ ("sta    %v      ", pointer1);
 
+    // We clear the memory before compilation to prevent left-over code from
+    // being interpreted as jumps by the second pass.
+    (void)memset(baf_write_address, 0, baf_write_buffer_size);
+
     if (!baf_compile_first_pass())
         return BAF_COMPILE_OUT_OF_MEMORY;
+
+    // Global variable function parameter passing.
+    baf_write_address = compiler->write_buffer;
 
     if (!baf_compile_second_pass())
         return BAF_COMPILE_UNTERMINATED_LOOP;
@@ -601,20 +698,6 @@ BAFCompileResult baf_compile(const BAFCompiler* compiler) {
 /*             puts("?ABORT"); */
 /*             break; */
 /*         } */
-
-/*     lopcode_jeq: */
-/*         if (baf_interpreter_bfmem[baf_interpreter_bfmem_index] == 0) { */
-/*             program_index = (uint16_t)argument */
-/*                           + ((uint16_t)baf_interpreter_program_memory[program_index+2] << 8); */
-/*         } */
-/*         goto lfinish_interpreter_cycle; */
-
-/*     lopcode_jne: */
-/*         if (baf_interpreter_bfmem[baf_interpreter_bfmem_index] != 0) { */
-/*             program_index = (uint16_t)argument */
-/*                           + ((uint16_t)baf_interpreter_program_memory[program_index+2] << 8); */
-/*         } */
-/*         goto lfinish_interpreter_cycle; */
 
 /*     lopcode_execute: */
 /*         baf_interpreter_register_a = baf_interpreter_bfmem[baf_interpreter_bfmem_index]; */

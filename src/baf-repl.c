@@ -180,6 +180,7 @@ int main(void) {
     // Initalizes the compiler.
     compiler.read_buffer             = input_buffer;
     compiler.write_buffer            = program_memory;
+    compiler.write_buffer_size       = PROGRAM_MEMORY_SIZE;
     compiler.cell_memory_pointer     = &cell_memory_pointer;
     compiler.computer_memory_pointer = &computer_memory_pointer;
 
