@@ -97,9 +97,9 @@ for TARGET in $TARGETS; do
 
     CC65_DIRECTORY=${CC65DIR:-/usr/share/cc65}
     CC=cl65
-    CFLAGS=${CFLAGS:-'-Osir --static-locals -Wc -W,error'}
+    CFLAGS=${CFLAGS:-'-Osir -Cl -Wc -W,error,-W,struct-param'}
     # shellcheck disable=SC2089 # We want \" treated literally.
-    ALL_CFLAGS="$CFLAGS --target $TARGET --include-dir $CC65_DIRECTORY/include --cfg-path $CC65_DIRECTORY/cfg --lib-path $CC65_DIRECTORY/lib -D BASICFUCK_MEMORY_SIZE=${BASICFUCK_MEMORY_SIZE}U -D HISTORY_STACK_SIZE=${HISTORY_STACK_SIZE}U -D TOOLKIT_VERSION=\"$TOOLKIT_VERSION\""
+    ALL_CFLAGS="$CFLAGS -t $TARGET -I $CC65_DIRECTORY/include --asm-include-dir $CC65_DIRECTORY/asminc -L $CC65_DIRECTORY/lib --cfg-path $CC65_DIRECTORY/cfg  -D BASICFUCK_MEMORY_SIZE=${BASICFUCK_MEMORY_SIZE}U -D HISTORY_STACK_SIZE=${HISTORY_STACK_SIZE}U -D TOOLKIT_VERSION=\"$TOOLKIT_VERSION\""
 
     SOURCE_DIRECTORY=src
     SOURCE=$SOURCE_DIRECTORY/baf-repl.c
@@ -111,13 +111,13 @@ for TARGET in $TARGETS; do
     if [ 0 -eq $# ] || [ build = "$1" ]; then
         set -x
         mkdir -p "$OUT_DIRECTORY"                || exit 1
-        # shellcheck disable=SC2086,2090 # We want word splitting.
+        # shellcheck disable=SC2086,SC2090 # We want word splitting.
         $CC $ALL_CFLAGS -o "$REPL_OUT" "$SOURCE" || exit 1
 
     elif [ assembly = "$1" ]; then
         assembly=${SOURCE%.c}.s; assembly=${assembly#"${SOURCE_DIRECTORY}/"}
         set -x
-        # shellcheck disable=SC2086,2090 # We want word splitting.
+        # shellcheck disable=SC2086,SC2090 # We want word splitting.
         $CC $ALL_CFLAGS -S -o "$assembly" "$SOURCE" || exit 1
 
     elif [ run = "$1" ]; then
