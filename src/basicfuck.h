@@ -135,6 +135,13 @@ static uint8_t** baf_computer_memory_pointer = NULL;
 static const uint8_t* baf_read_address = NULL;
 
 /**
+ * Increments a pointer to point at the next byte in memory.
+ * @param type - the pointer's type.
+ * @param value - the pointer's value.
+ */
+#define BAF_INCREMENT_POINTER(type, value) (type)(1 + (uint16_t)(value))
+
+/**
  * The address in the write buffer to write compiled programs to. Must be
  * initialized prior to calls to the compilation leaf-functions, and is
  * clobbered by them.
@@ -175,20 +182,20 @@ static baf_opcode_t* baf_write_address = NULL;
  * @param baf_write_address (global).
  * @param pointer1 (global).
  */
-#define BAF_PUSH_DEREFERNCE_FUNCTION(register)                       \
-    static void baf_push_dereference_##register(uint8_t** address) { \
-        /*    ld<register>    address */                             \
-        BAF_PUSH(baf_opcode_t,   BAF_LD##register##_ABSOLUTE);       \
-        BAF_PUSH(uint8_t**,      address);                           \
-        /*    st<register>    pointer1 */                            \
-        BAF_PUSH(baf_opcode_t,   BAF_ST##register##_ZEROPAGE);       \
-        BAF_PUSH(baf_zeropage_t, pointer1);                          \
-        /*    ld<register>    address+1 */                           \
-        BAF_PUSH(baf_opcode_t,   BAF_LD##register##_ABSOLUTE);       \
-        BAF_PUSH(uint8_t**,      (uint8_t**)(1+(uint16_t)address));  \
-        /*    st<register>    pointer1+1 */                          \
-        BAF_PUSH(baf_opcode_t,   BAF_ST##register##_ZEROPAGE);       \
-        BAF_PUSH(baf_zeropage_t, 1+pointer1);                        \
+#define BAF_PUSH_DEREFERNCE_FUNCTION(register)                               \
+    static void baf_push_dereference_##register(uint8_t** address) {         \
+        /*    ld<register>    address */                                     \
+        BAF_PUSH(baf_opcode_t,   BAF_LD##register##_ABSOLUTE);               \
+        BAF_PUSH(uint8_t**,      address);                                   \
+        /*    st<register>    pointer1 */                                    \
+        BAF_PUSH(baf_opcode_t,   BAF_ST##register##_ZEROPAGE);               \
+        BAF_PUSH(baf_zeropage_t, pointer1);                                  \
+        /*    ld<register>    address+1 */                                   \
+        BAF_PUSH(baf_opcode_t,   BAF_LD##register##_ABSOLUTE);               \
+        BAF_PUSH(uint8_t**,      BAF_INCREMENT_POINTER(uint8_t**, address)); \
+        /*    st<register>    pointer1+1 */                                  \
+        BAF_PUSH(baf_opcode_t,   BAF_ST##register##_ZEROPAGE);               \
+        BAF_PUSH(baf_zeropage_t, 1+pointer1);                                \
     }
 BAF_PUSH_DEREFERNCE_FUNCTION(A)
 BAF_PUSH_DEREFERNCE_FUNCTION(X)
@@ -284,7 +291,8 @@ static bool baf_compile_first_pass() {
             BAF_PUSH(uint8_t,      3);
             //    dec    cell_memory_pointer+1
             BAF_PUSH(baf_opcode_t, BAF_DEC_ABSOLUTE);
-            BAF_PUSH(baf_cell_t**, (baf_cell_t**)(1 + (uint16_t)baf_cell_memory_pointer));
+            BAF_PUSH( baf_cell_t**
+                    , BAF_INCREMENT_POINTER(baf_cell_t**, baf_cell_memory_pointer));
             // lno_borrow:
         } continue;
 
@@ -310,7 +318,8 @@ static bool baf_compile_first_pass() {
             BAF_PUSH(uint8_t,      3);
             //    inc    cell_memory_pointer+1
             BAF_PUSH(baf_opcode_t, BAF_INC_ABSOLUTE);
-            BAF_PUSH(baf_cell_t**, (baf_cell_t**)(1 + (uint16_t)baf_cell_memory_pointer));
+            BAF_PUSH( baf_cell_t**
+                    , BAF_INCREMENT_POINTER(baf_cell_t**, baf_cell_memory_pointer));
             // lno_carry:
         } continue;
 
@@ -344,7 +353,7 @@ static bool baf_compile_first_pass() {
             BAF_PUSH_FUNCTION(uint8_t, void, &s_wrapped_cgetc);
             //    ldy    #$00
             BAF_PUSH(baf_opcode_t, BAF_LDY_IMMEDIATE);
-            BAF_PUSH(uint8_t, 0);
+            BAF_PUSH(uint8_t,      0);
             //    *cell_memory_pointer
             baf_push_dereference_X(baf_cell_memory_pointer);
             //    sta    (pointer1),y
@@ -417,7 +426,8 @@ static bool baf_compile_first_pass() {
             BAF_PUSH(uint8_t,      3);
             //    dec    computer_memory_pointer+1
             BAF_PUSH(baf_opcode_t, BAF_DEC_ABSOLUTE);
-            BAF_PUSH(uint8_t**,    (uint8_t**)(1 + (uint16_t)baf_computer_memory_pointer));
+            BAF_PUSH( uint8_t**
+                    , BAF_INCREMENT_POINTER(uint8_t**, baf_computer_memory_pointer));
             // lno_borrow:
         } continue;
 
@@ -443,7 +453,8 @@ static bool baf_compile_first_pass() {
             BAF_PUSH(uint8_t,      3);
             //    inc    computer_memory_pointer+1
             BAF_PUSH(baf_opcode_t, BAF_INC_ABSOLUTE);
-            BAF_PUSH(uint8_t**,    (uint8_t**)(1 + (uint16_t)baf_computer_memory_pointer));
+            BAF_PUSH( uint8_t**
+                    , BAF_INCREMENT_POINTER(uint8_t**, baf_computer_memory_pointer));
             // lno_carry:
         } continue;
 
