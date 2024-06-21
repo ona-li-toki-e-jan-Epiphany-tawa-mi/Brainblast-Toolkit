@@ -113,14 +113,25 @@ BAFCompileResult baf_compile(const BAFCompiler* compiler);
 #include "screen.h"
 
 /**
- * Zero page addresses.
+ * Macro to pass two comma separated values as a single argument to a macro.
+ */
+#define BAF_MACRO_ARG(a, b) a, b
+
+/**
+ * Zeropage addresses.
  */
 typedef uint8_t baf_zeropage_t;
 /**
  * The first pointer register allocated by cc65. Used for indirect
  * addressing.
  */
-static baf_zeropage_t pointer1 = NULL;
+static baf_zeropage_t baf_pointer1 = NULL;
+
+/**
+ * Pointer to the cc65 pushax register that pushes the A (low-byte) and X
+ * (high-byte) registers on the software stack.
+ */
+static baf_opcode_t* baf_pushax = NULL;
 
 /**
  * A pointer to the variable to use as the pointer into cell memory in the
@@ -187,30 +198,77 @@ static uint16_t      baf_write_buffer_size = 0;
  * Creates a function to push the instructions required to set up the
  * dereference of the given pointer. After calling, the pointer will be loaded
  * into the first pointer register and can be dereferenced with 'st<register>
- * (pointer1),y' or 'ld<register> (pointer1),y'.
+ * (baf_pointer1),y' or 'ld<register> (baf_pointer1),y'.
  * Clobbers the <register> register.
  * @param register - the register to use to load the pointer into the zeropage.
  * @param address - the address of the pointer.
  * @param baf_write_address (global).
- * @param pointer1 (global).
+ * @param baf_pointer1 (global).
  */
 #define BAF_PUSH_DEREFERNCE_FUNCTION(register)                               \
     static void baf_push_dereference_##register(uint8_t** address) {         \
         /*    ld<register>    address */                                     \
         BAF_PUSH(baf_opcode_t,   BAF_LD##register##_ABSOLUTE);               \
         BAF_PUSH(uint8_t**,      address);                                   \
-        /*    st<register>    pointer1 */                                    \
+        /*    st<register>    ptr1 */                                        \
         BAF_PUSH(baf_opcode_t,   BAF_ST##register##_ZEROPAGE);               \
-        BAF_PUSH(baf_zeropage_t, pointer1);                                  \
+        BAF_PUSH(baf_zeropage_t, baf_pointer1);                              \
         /*    ld<register>    address+1 */                                   \
         BAF_PUSH(baf_opcode_t,   BAF_LD##register##_ABSOLUTE);               \
         BAF_PUSH(uint8_t**,      BAF_INCREMENT_POINTER(uint8_t**, address)); \
-        /*    st<register>    pointer1+1 */                                  \
+        /*    st<register>    ptr1+1 */                                      \
         BAF_PUSH(baf_opcode_t,   BAF_ST##register##_ZEROPAGE);               \
-        BAF_PUSH(baf_zeropage_t, 1+pointer1);                                \
+        BAF_PUSH(baf_zeropage_t, 1+baf_pointer1);                            \
     }
 BAF_PUSH_DEREFERNCE_FUNCTION(A)
 BAF_PUSH_DEREFERNCE_FUNCTION(X)
+
+// Global variables for execute instruction to pass variables back and forth
+// with assembly.
+static uint8_t  baf_execute_a            = 0;
+static uint8_t  baf_execute_x            = 0;
+static uint8_t  baf_execute_y            = 0;
+static uint8_t* baf_execute_cmem_address = NULL;
+/**
+ * Runtime for execute '%' instruction.
+ * @param cell_memory_address - the address of the current cell.
+ * @param computer_memory_address - the address of the current location in
+ *                                  computer memory.
+ */
+static void baf_execute(baf_opcode_t* cell_memory_address, uint8_t* computer_memory_address) {
+    baf_execute_cmem_address = computer_memory_address;
+    // Load current and next two cells into register variables.
+    baf_execute_a = *cell_memory_address;
+    baf_execute_x = cell_memory_address[1];
+    baf_execute_y = cell_memory_address[2];
+
+    // Overwrites address of subroutine to call in next assembly block with the
+    // computer memory pointer's value.
+    __asm__ volatile ("lda    %v",   baf_execute_cmem_address);
+    __asm__ volatile ("sta    %g+1", ljsr                    );
+    __asm__ volatile ("lda    %v+1", baf_execute_cmem_address);
+    __asm__ volatile ("sta    %g+2", ljsr                    );
+    // Executes subroutine.
+    __asm__ volatile ("lda    %v",   baf_execute_a           );
+    __asm__ volatile ("ldx    %v",   baf_execute_x           );
+    __asm__ volatile ("ldy    %v",   baf_execute_y           );
+ ljsr:
+    __asm__ volatile ("jsr    %w",   NULL                    );
+    // Retrieves resulting values.
+    __asm__ volatile ("sta    %v",   baf_execute_a           );
+    __asm__ volatile ("stx    %v",   baf_execute_x           );
+    __asm__ volatile ("sty    %v",   baf_execute_y           );
+
+    // Write back resulting values into cell memory.
+    *cell_memory_address   = baf_execute_a;
+    cell_memory_address[1] = baf_execute_x;
+    cell_memory_address[2] = baf_execute_y;
+
+    return;
+    // If we don't include a jmp instruction, cc65, annoyingly, strips the label
+    // from the resulting assembly.
+    __asm__ volatile ("jmp    %g", ljsr);
+}
 
 // TODO add bounds checking.
 // TODO add abiltiy to abort program.
@@ -219,7 +277,7 @@ BAF_PUSH_DEREFERNCE_FUNCTION(X)
  * to machine code.
  * @param baf_read_address (global).
  * @param baf_write_address (global).
- * @param pointer1 (global).
+ * @param baf_pointer1 (global).
  * @return true if succeeded, false if ran out of memory.
  */
 static bool baf_compile_first_pass() {
@@ -268,17 +326,17 @@ static bool baf_compile_first_pass() {
             BAF_PUSH(uint8_t,      0);
             //    *cell_memory_pointer
             baf_push_dereference_A(baf_cell_memory_pointer);
-            //    lda    (pointer1),y
+            //    lda    (ptr1),y
             BAF_PUSH(baf_opcode_t, BAF_LDA_INDIRECT_Y);
-            BAF_PUSH(uint8_t,      pointer1);
+            BAF_PUSH(uint8_t,      baf_pointer1);
             //    clc
             BAF_PUSH(baf_opcode_t, BAF_CLC);
             //    adc    #operand
             BAF_PUSH(baf_opcode_t, BAF_ADC_IMMEDIATE);
             BAF_PUSH(uint8_t,      operand);
-            //    sta    (pointer1),y
+            //    sta    (ptr1),y
             BAF_PUSH(baf_opcode_t, BAF_STA_INDIRECT_Y);
-            BAF_PUSH(uint8_t,      pointer1);
+            BAF_PUSH(uint8_t,      baf_pointer1);
         } continue;
 
             // Moves the cell memory pointer to the right.
@@ -344,9 +402,9 @@ static bool baf_compile_first_pass() {
             BAF_PUSH(uint8_t,      0);
             //    *cell_memory_pointer
             baf_push_dereference_A(baf_cell_memory_pointer);
-            //    lda    (pointer1),y
+            //    lda    (ptr1),y
             BAF_PUSH(baf_opcode_t, BAF_LDA_INDIRECT_Y);
-            BAF_PUSH(uint8_t,      pointer1);
+            BAF_PUSH(uint8_t,      baf_pointer1);
             //    ldx    #$00
             BAF_PUSH(baf_opcode_t, BAF_LDX_IMMEDIATE);
             BAF_PUSH(uint8_t,      0);
@@ -368,11 +426,13 @@ static bool baf_compile_first_pass() {
             BAF_PUSH(uint8_t,      0);
             //    *cell_memory_pointer
             baf_push_dereference_X(baf_cell_memory_pointer);
-            //    sta    (pointer1),y
+            //    sta    (ptr1),y
             BAF_PUSH(baf_opcode_t, BAF_STA_INDIRECT_Y);
-            BAF_PUSH(uint8_t,      pointer1);
+            BAF_PUSH(uint8_t,      baf_pointer1);
         } continue;
 
+            // '[' Jumps past the corresponding ']' if the current cell is 0.
+            // ']' Jumps past the corresponding '[' if the current cell is not 0.
         case '[':
         case ']': {
             // if (0 == *cell_memory_pointer) goto lmatching_jne;
@@ -384,9 +444,9 @@ static bool baf_compile_first_pass() {
             BAF_PUSH(uint8_t,      0);
             //    *cell_memory_pointer
             baf_push_dereference_A(baf_cell_memory_pointer);
-            //    lda    (pointer1),y
+            //    lda    (ptr1),y
             BAF_PUSH(baf_opcode_t, BAF_LDA_INDIRECT_Y);
-            BAF_PUSH(uint8_t,      pointer1);
+            BAF_PUSH(uint8_t,      baf_pointer1);
             //    cmp    #$00
             BAF_PUSH(baf_opcode_t, BAF_CMP_IMMEDIATE);
             BAF_PUSH(uint8_t,      0);
@@ -417,14 +477,14 @@ static bool baf_compile_first_pass() {
             BAF_PUSH(uint8_t,      0);
             //    *computer_memory_pointer
             baf_push_dereference_A(baf_computer_memory_pointer);
-            //    lda    (pointer1),y
+            //    lda    (ptr1),y
             BAF_PUSH(baf_opcode_t, BAF_LDA_INDIRECT_Y);
-            BAF_PUSH(uint8_t,      pointer1);
+            BAF_PUSH(uint8_t,      baf_pointer1);
             //    *computer_memory_pointer
             baf_push_dereference_X(baf_cell_memory_pointer);
-            //    sta    (pointer1),y
+            //    sta    (ptr1),y
             BAF_PUSH(baf_opcode_t, BAF_STA_INDIRECT_Y);
-            BAF_PUSH(baf_cell_t,   pointer1);
+            BAF_PUSH(baf_cell_t,   baf_pointer1);
         } continue;
 
             // Writes the value of the current cell to the computer memory
@@ -437,14 +497,14 @@ static bool baf_compile_first_pass() {
             BAF_PUSH(uint8_t,      0);
             //    *cell_memory_pointer
             baf_push_dereference_A(baf_cell_memory_pointer);
-            //    lda    (pointer1),y
+            //    lda    (ptr1),y
             BAF_PUSH(baf_opcode_t, BAF_LDA_INDIRECT_Y);
-            BAF_PUSH(uint8_t,      pointer1);
+            BAF_PUSH(uint8_t,      baf_pointer1);
             //    *computer_memory_pointer
             baf_push_dereference_X(baf_computer_memory_pointer);
-            //    sta    (pointer1),y
+            //    sta    (ptr1),y
             BAF_PUSH(baf_opcode_t, BAF_STA_INDIRECT_Y);
-            BAF_PUSH(uint8_t,      pointer1);
+            BAF_PUSH(uint8_t,      baf_pointer1);
         } continue;
 
             // Moves the computer memory pointer to the left.
@@ -501,7 +561,33 @@ static bool baf_compile_first_pass() {
             // lno_carry:
         } continue;
 
-        case '%': assert(false && "TODO");
+            // Loads the value of the current and next 2 cells into the A, X,
+            // and Y registers respectively, and then executes the current
+            // location in computer memory as a subroutine.
+        case '%': {
+            // baf_execute(cell_memory_pointer, computer_memory_pointer);
+
+            //    lda    cell_memory_pointer
+            BAF_PUSH(baf_opcode_t,  BAF_LDA_ABSOLUTE);
+            BAF_PUSH(baf_cell_t**,  baf_cell_memory_pointer);
+            //    ldx    cell_memory_pointer+1
+            BAF_PUSH(baf_opcode_t,  BAF_LDX_ABSOLUTE);
+            BAF_PUSH( baf_cell_t**
+                    , BAF_INCREMENT_POINTER(baf_cell_t**, baf_cell_memory_pointer));
+            //    jsr    pushax
+            BAF_PUSH(baf_opcode_t,  BAF_JSR);
+            BAF_PUSH(baf_opcode_t*, baf_pushax);
+            //    lda    computer_memory_pointer
+            BAF_PUSH(baf_opcode_t,  BAF_LDA_ABSOLUTE);
+            BAF_PUSH(baf_cell_t**,  baf_computer_memory_pointer);
+            //    ldx    computer_memory_pointer+1
+            BAF_PUSH(baf_opcode_t,  BAF_LDX_ABSOLUTE);
+            BAF_PUSH( baf_cell_t**
+                    , BAF_INCREMENT_POINTER(baf_cell_t**, baf_computer_memory_pointer));
+            //    jsr    _baf_execute
+            BAF_PUSH(baf_opcode_t,  BAF_JSR);
+            BAF_PUSH_FUNCTION(void, BAF_MACRO_ARG(baf_opcode_t*,uint8_t*), &baf_execute);
+        } continue;
 
             // Ignores non-instructions.
         default: continue;
@@ -625,10 +711,14 @@ BAFCompileResult baf_compile(const BAFCompiler* compiler) {
     baf_write_buffer_size       = compiler->write_buffer_size;
     baf_cell_memory_pointer     = compiler->cell_memory_pointer;
     baf_computer_memory_pointer = compiler->computer_memory_pointer;
-    // We can't access assembly variables directly from C, so instead we use a
-    // little inline assembly to copy it to a C variable.
-    __asm__ ("lda    #<(ptr1)"          );
-    __asm__ ("sta    %v      ", pointer1);
+    // We can't access assembly labels directly from C, so instead we use a
+    // little inline assembly to copy them to C variables.
+    __asm__ ("lda    #<(ptr1)  "               );
+    __asm__ ("sta    %v        ", baf_pointer1 );
+    __asm__ ("lda    #<(pushax)"               );
+    __asm__ ("sta    %v        ", baf_pushax   );
+    __asm__ ("lda    #>(pushax)"               );
+    __asm__ ("sta    %v+1      ", baf_pushax   );
 
     // We clear the memory before compilation to prevent left-over code from
     // being interpreted as jumps by the second pass.
@@ -646,42 +736,6 @@ BAFCompileResult baf_compile(const BAFCompiler* compiler) {
     return BAF_COMPILE_SUCCESS;
 }
 
-/* /\** */
-/*  * Runs the execute part of the BASICfuck execute instruction. */
-/*  * */
-/*  * @param baf_interpreter_register_a (global) - the value to place in the A */
-/*  *                                              register. */
-/*  * @param baf_interpreter_register_x (global) - the value to place in the X */
-/*  *                                              register. */
-/*  * @param baf_interpreter_register_y (global) - the value to place in the Y */
-/*  *                                              register. */
-/*  * @param baf_interpreter_cmem_pointer (global) - the address to execute as a */
-/*  *                                                subroutine. */
-/*  *\/ */
-/* static void baf_execute() { */
-/*     // Overwrites address of subroutine to call in next assembly block with the */
-/*     // computer memory pointer's value. */
-/*     __asm__ volatile ("lda     %v",   baf_interpreter_cmem_pointer); */
-/*     __asm__ volatile ("sta     %g+1", ljump_instruction); */
-/*     __asm__ volatile ("lda     %v+1", baf_interpreter_cmem_pointer); */
-/*     __asm__ volatile ("sta     %g+2", ljump_instruction); */
-/*     // Executes subroutine. */
-/*     __asm__ volatile ("lda     %v",   baf_interpreter_register_a); */
-/*     __asm__ volatile ("ldx     %v",   baf_interpreter_register_x); */
-/*     __asm__ volatile ("ldy     %v",   baf_interpreter_register_y); */
-/*  ljump_instruction: */
-/*     __asm__ volatile ("jsr     %w",   NULL); */
-/*     // Retrieves resuting values. */
-/*     __asm__ volatile ("sta     %v",   baf_interpreter_register_a); */
-/*     __asm__ volatile ("stx     %v",   baf_interpreter_register_x); */
-/*     __asm__ volatile ("sty     %v",   baf_interpreter_register_y); */
-
-/*     return; */
-/*     // If we don't include a jmp instruction, cc65, annoyingly, strips the label */
-/*     // from the resulting assembly. */
-/*     __asm__ volatile ("jmp     %g", ljump_instruction); */
-/* } */
-
 /* void baf_interpret() { */
 
 /*     while (true) { */
@@ -689,16 +743,6 @@ BAFCompileResult baf_compile(const BAFCompiler* compiler) {
 /*             puts("?ABORT"); */
 /*             break; */
 /*         } */
-
-/*     lopcode_execute: */
-/*         baf_interpreter_register_a = baf_interpreter_bfmem[baf_interpreter_bfmem_index]; */
-/*         baf_interpreter_register_x = baf_interpreter_bfmem[baf_interpreter_bfmem_index+1]; */
-/*         baf_interpreter_register_y = baf_interpreter_bfmem[baf_interpreter_bfmem_index+2]; */
-/*         baf_execute(); */
-/*         baf_interpreter_bfmem[baf_interpreter_bfmem_index]   = baf_interpreter_register_a; */
-/*         baf_interpreter_bfmem[baf_interpreter_bfmem_index+1] = baf_interpreter_register_x; */
-/*         baf_interpreter_bfmem[baf_interpreter_bfmem_index+2] = baf_interpreter_register_y; */
-/*         goto lfinish_interpreter_cycle; */
 /* } */
 
 #endif // BASICFUCK_IMPLEMENTATION
