@@ -577,20 +577,9 @@ static bool baf_compile_second_pass() {
             }
 
             baf_write_address += 3;
-        } break;
+        } continue;
 
-        case BAF_JNE_PLACEHOLDER: {
-            // If there is no null pointer after the placeholder, then this is
-            // just some random value.
-            if (NULL != *BAF_INCREMENT_POINTER(baf_opcode_t**, baf_write_address)) {
-                ++baf_write_address;
-                continue;
-            }
-
-            baf_write_address += 3;
-        } break;
-
-        default: ++baf_write_address; break;
+        default: ++baf_write_address; continue;
         }
     }
 
