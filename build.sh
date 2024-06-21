@@ -109,10 +109,13 @@ for TARGET in $TARGETS; do
 
 
     if [ 0 -eq $# ] || [ build = "$1" ]; then
+        object=${SOURCE%.c}.o; object=${object#"${SOURCE_DIRECTORY}/"}
         set -x
-        mkdir -p "$OUT_DIRECTORY"                || exit 1
         # shellcheck disable=SC2086,SC2090 # We want word splitting.
-        $CC $ALL_CFLAGS -o "$REPL_OUT" "$SOURCE" || exit 1
+        $CC $ALL_CFLAGS -c -o "$object" "$SOURCE"  || exit 1
+        mkdir -p "$OUT_DIRECTORY"                  || exit 1
+        # shellcheck disable=SC2086,SC2090 # We want word splitting.
+        $CC $ALL_CFLAGS -o "$REPL_OUT" "$object"   || exit 1
 
     elif [ assembly = "$1" ]; then
         assembly=${SOURCE%.c}.s; assembly=${assembly#"${SOURCE_DIRECTORY}/"}
@@ -126,7 +129,7 @@ for TARGET in $TARGETS; do
 
     elif [ clean = "$1" ]; then
         set -x
-        rm -r "$OUT_DIRECTORY" "$SOURCE_DIRECTORY"/*.o ./*.s
+        rm -rf "$OUT_DIRECTORY" ./*.o ./*.s
 
     else
         echo "$0: Error: Unknown build command '$1'" 1>&2
