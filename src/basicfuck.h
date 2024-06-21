@@ -88,9 +88,9 @@ typedef struct {
 } BAFCompiler;
 
 typedef uint8_t BAFCompileResult;
-#define BAF_COMPILE_SUCCESS           0U
-#define BAF_COMPILE_OUT_OF_MEMORY     1U
-#define BAF_COMPILE_UNTERMINATED_LOOP 2U
+#define BAF_COMPILE_SUCCESS           0
+#define BAF_COMPILE_OUT_OF_MEMORY     1
+#define BAF_COMPILE_UNTERMINATED_LOOP 2
 /**
  * Compiles BASICfuck code to 6502 machine code.
  * @param compiler.
@@ -109,6 +109,8 @@ BAFCompileResult baf_compile(const BAFCompiler* compiler);
 #include <stdbool.h>
 #include <stddef.h>
 #include <assert.h>
+
+#include "screen.h"
 
 /**
  * Zero page addresses.
@@ -389,13 +391,13 @@ static bool baf_compile_first_pass() {
             BAF_PUSH(baf_opcode_t, BAF_CMP_IMMEDIATE);
             BAF_PUSH(uint8_t,      0);
             if ('[' == instruction) {
-                //    beq    lno_jump
+                //    bne    lno_jump
                 BAF_PUSH(baf_opcode_t, BAF_BNE);
                 BAF_PUSH(uint8_t,      3);
                 //    jmp    lmatching_jne
                 BAF_PUSH(baf_opcode_t, BAF_JEQ_PLACEHOLDER);
             } else {
-                //    bne    lno_jump
+                //    beq    lno_jump
                 BAF_PUSH(baf_opcode_t, BAF_BEQ);
                 BAF_PUSH(uint8_t,      3);
                 //    jmp    lmatching_jeq
