@@ -111,6 +111,7 @@ BAFCompileResult baf_compile(const BAFCompiler* compiler);
 #include <assert.h>
 
 #include "screen.h"
+#include "keyboard.h"
 
 /**
  * Macro to pass two comma separated values as a single argument to a macro.
@@ -231,9 +232,10 @@ static uint8_t  baf_execute_y            = 0;
 static uint8_t* baf_execute_cmem_address = NULL;
 /**
  * Runtime for execute '%' instruction.
+ * TODO: switch from function parameters to global variable parameters.
  * @param cell_memory_address - the address of the current cell.
  * @param computer_memory_address - the address of the current location in
- *                                  computer memory.
+ *        computer memory.
  */
 static void baf_execute(baf_opcode_t* cell_memory_address, uint8_t* computer_memory_address) {
     baf_execute_cmem_address = computer_memory_address;
@@ -270,8 +272,21 @@ static void baf_execute(baf_opcode_t* cell_memory_address, uint8_t* computer_mem
     __asm__ volatile ("jmp    %g", ljsr);
 }
 
-// TODO add bounds checking.
-// TODO add abiltiy to abort program.
+/**
+ * Checks and returns if the STOP key is pressed, meaning the program should be
+ * aborted.
+ */
+static bool baf_abort_check() {
+    if (0 != kbhit() && KEYBOARD_STOP == cgetc()) {
+        puts("?ABORT");
+        return true;
+    }
+
+    return false;
+}
+
+// TODO add bounds checking for instruction pushing.
+// TODO add bounds checking for cell memory pointer.
 /**
  * Performs the first pass of BASICfuck compilation, converting the text program
  * to machine code.
@@ -416,11 +431,34 @@ static bool baf_compile_first_pass() {
             // Accepts a character from the keyboard and stores its value in the
             // current cell.
         case ',': {
-            // *baf_cell_memory_pointer = s_wrapped_cgetc();
+            // uint8_t character = s_wrapped_cgetc();
+            // if (KEYBOARD_STOP == character) {
+            //     (void)puts("?ABORT");
+            //     return;
+            // }
+            // *baf_cell_memory_pointer = character;
 
             //    jsr    _s_wrapped_cgetc
             BAF_PUSH(baf_opcode_t, BAF_JSR);
             BAF_PUSH_FUNCTION(uint8_t, void, &s_wrapped_cgetc);
+            //    cmp    #KEYBOARD_STOP
+            BAF_PUSH(baf_opcode_t, BAF_CMP_IMMEDIATE);
+            BAF_PUSH(uint8_t,      KEYBOARD_STOP);
+            //    bne    ldont_abort
+            BAF_PUSH(baf_opcode_t, BAF_BNE);
+            BAF_PUSH(uint8_t,      8);
+            //    lda    #>(abort_string);
+            BAF_PUSH(baf_opcode_t, BAF_LDA_IMMEDIATE);
+            BAF_PUSH(uint8_t,      (uint8_t)"?ABORT");
+            //    ldx    #<(abort_string);
+            BAF_PUSH(baf_opcode_t, BAF_LDX_IMMEDIATE);
+            BAF_PUSH(uint8_t,      (uint8_t)((int16_t)"?ABORT">>8));
+            //    jsr    _puts
+            BAF_PUSH(baf_opcode_t, BAF_JSR);
+            BAF_PUSH_FUNCTION(int, const char*, &puts);
+            //    rts
+            BAF_PUSH(baf_opcode_t, BAF_RTS);
+            // ldont_abort:
             //    ldy    #$00
             BAF_PUSH(baf_opcode_t, BAF_LDY_IMMEDIATE);
             BAF_PUSH(uint8_t,      0);
@@ -435,7 +473,10 @@ static bool baf_compile_first_pass() {
             // ']' Jumps past the corresponding '[' if the current cell is not 0.
         case '[':
         case ']': {
-            // if (0 == *cell_memory_pointer) goto lmatching_jne;
+            // if (0 == *cell_memory_pointer) {
+            //     if (true == baf_abort_check) return;
+            //     goto lmatching_jne;
+            // }
             // OR
             // if (0 != *cell_memory_pointer) goto lmatching_jeq;
 
@@ -465,6 +506,20 @@ static bool baf_compile_first_pass() {
             }
             BAF_PUSH(baf_opcode_t**, NULL);
             // lno_jump:
+            if ('[' == instruction) {
+                //    jsr    _baf_abort_check
+                BAF_PUSH(baf_opcode_t, BAF_JSR);
+                BAF_PUSH_FUNCTION(bool, void, &baf_abort_check);
+                //    cmp    #true
+                BAF_PUSH(baf_opcode_t, BAF_CMP_IMMEDIATE);
+                BAF_PUSH(uint8_t,      true)
+                //    bne    lno_abort
+                BAF_PUSH(baf_opcode_t, BAF_BNE);
+                BAF_PUSH(uint8_t,      1);
+                //    rts
+                BAF_PUSH(baf_opcode_t, BAF_RTS);
+                // lno_abort:
+            }
         } continue;
 
             // Writes the value at the computer memory pointer's address to the
@@ -735,15 +790,6 @@ BAFCompileResult baf_compile(const BAFCompiler* compiler) {
 
     return BAF_COMPILE_SUCCESS;
 }
-
-/* void baf_interpret() { */
-
-/*     while (true) { */
-/*         if (kbhit() != 0 && cgetc() == KEYBOARD_STOP) { */
-/*             puts("?ABORT"); */
-/*             break; */
-/*         } */
-/* } */
 
 #endif // BASICFUCK_IMPLEMENTATION
 
