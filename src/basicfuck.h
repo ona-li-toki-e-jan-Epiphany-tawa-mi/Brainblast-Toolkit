@@ -232,7 +232,6 @@ static uint8_t  baf_execute_y            = 0;
 static uint8_t* baf_execute_cmem_address = NULL;
 /**
  * Runtime for execute '%' instruction.
- * TODO: switch from function parameters to global variable parameters.
  * @param cell_memory_address - the address of the current cell.
  * @param computer_memory_address - the address of the current location in
  *        computer memory.
@@ -285,7 +284,6 @@ static bool baf_abort_check() {
     return false;
 }
 
-// TODO add bounds checking for instruction pushing.
 // TODO add bounds checking for cell memory pointer.
 /**
  * Performs the first pass of BASICfuck compilation, converting the text program
@@ -296,6 +294,8 @@ static bool baf_abort_check() {
  * @return true if succeeded, false if ran out of memory.
  */
 static bool baf_compile_first_pass() {
+    baf_opcode_t* write_buffer_end = baf_write_address + baf_write_buffer_size;
+
     uint8_t instruction = 0;
     // Used to count the number of times an instruction occurs.
     uint8_t operand = 0;
@@ -320,6 +320,8 @@ static bool baf_compile_first_pass() {
         switch (instruction) {
             // The null-terminator marks the end of the program.
         case '\0': {
+            if (baf_write_address > write_buffer_end - 1) return false;
+
             // return;
 
             //    rts
@@ -329,6 +331,9 @@ static bool baf_compile_first_pass() {
             // Increments/decrements the current cell.
         case '+':
         case '-': {
+            if (baf_write_address > write_buffer_end - (2 + 10 + 2 + 1 + 2 + 2))
+                return false;
+
             BAF_COMPUTE_OPERAND;
             // To perform decrements we add the two's complement of the operand
             // to subtract, which is effectively subtraction.
@@ -356,6 +361,9 @@ static bool baf_compile_first_pass() {
 
             // Moves the cell memory pointer to the right.
         case '<': {
+            if (baf_write_address > write_buffer_end - (3 + 1 + 2 + 3 + 2 + 3))
+                return false;
+
             BAF_COMPUTE_OPERAND;
 
             // cell_memory_pointer -= operand;
@@ -383,6 +391,9 @@ static bool baf_compile_first_pass() {
 
             // Moves the cell memory pointer to the right.
         case '>': {
+            if (baf_write_address > write_buffer_end - (2 + 1 + 3 + 3 + 2 + 3))
+                return false;
+
             BAF_COMPUTE_OPERAND;
 
             // cell_memory_pointer += operand;
@@ -410,6 +421,9 @@ static bool baf_compile_first_pass() {
 
             // Prints the value of the current cell as a character.
         case '.': {
+            if (baf_write_address > write_buffer_end - (2 + 10 + 2 + 2 + 3))
+                return false;
+
             // (void)putchar(*cell_memory_pointer);
 
             //    ldy    #$00
@@ -431,6 +445,9 @@ static bool baf_compile_first_pass() {
             // Accepts a character from the keyboard and stores its value in the
             // current cell.
         case ',': {
+            if (baf_write_address > write_buffer_end - (3 + 2 + 2 + 2 + 2 + 3 + 1 + 2 + 10 + 2))
+                return false;
+
             // uint8_t character = s_wrapped_cgetc();
             // if (KEYBOARD_STOP == character) {
             //     (void)puts("?ABORT");
@@ -473,6 +490,10 @@ static bool baf_compile_first_pass() {
             // ']' Jumps past the corresponding '[' if the current cell is not 0.
         case '[':
         case ']': {
+          if (baf_write_address > write_buffer_end - ( 2 + 10 + 2 + 2 + (2 + 1) + 2
+                                                     + ('[' != instruction ? 0 : 3 + 2 + 2 + 1 )))
+                return false;
+
             // if (0 == *cell_memory_pointer) {
             //     if (true == baf_abort_check) return;
             //     goto lmatching_jne;
@@ -525,6 +546,9 @@ static bool baf_compile_first_pass() {
             // Writes the value at the computer memory pointer's address to the
             // current cell.
         case '@': {
+            if (baf_write_address > write_buffer_end - (2 + 10 + 2 + 10 + 2))
+                return false;
+
             // *cell_memory_pointer = *computer_memory_pointer;
 
             //    ldy    #$00
@@ -545,6 +569,9 @@ static bool baf_compile_first_pass() {
             // Writes the value of the current cell to the computer memory
             // pointer's address.
         case '*': {
+            if (baf_write_address > write_buffer_end - (2 + 10 + 2 + 10 + 2))
+                return false;
+
             // *computer_memory_pointer = *cell_memory_pointer;
 
             //    ldy    #$00
@@ -564,6 +591,9 @@ static bool baf_compile_first_pass() {
 
             // Moves the computer memory pointer to the left.
         case '(': {
+            if (baf_write_address > write_buffer_end - (3 + 1 + 2 + 3 + 2 + 3))
+                return false;
+
             BAF_COMPUTE_OPERAND;
 
             // computer_memory_pointer -= operand;
@@ -591,6 +621,9 @@ static bool baf_compile_first_pass() {
 
             // Moves the computer memory pointer to the right.
         case ')': {
+            if (baf_write_address > write_buffer_end - (2 + 1 + 3 + 3 + 2 + 3))
+                return false;
+
             BAF_COMPUTE_OPERAND;
 
             // computer_memory_pointer += operand;
@@ -620,6 +653,9 @@ static bool baf_compile_first_pass() {
             // and Y registers respectively, and then executes the current
             // location in computer memory as a subroutine.
         case '%': {
+            if (baf_write_address > write_buffer_end - (3 + 3 + 3 + 3 + 3 + 3))
+                return false;
+
             // baf_execute(cell_memory_pointer, computer_memory_pointer);
 
             //    lda    cell_memory_pointer
