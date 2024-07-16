@@ -34,7 +34,7 @@
 
 #include "keyboard.h"
 #define SCREEN_IMPLEMENTATION
-#define S_BUFFER_SIZE 6U
+#define SCREEN_BUFFER_SIZE 6
 #include "screen.h"
 #define TEXT_BUFFER_IMPLEMENTATION
 #include "text-buffer.h"
@@ -166,10 +166,10 @@ static void display_bytecode() {
 #define INPUT_BUFFER_SIZE 256U
 
 int main(void) {
-    uint8_t BASICfuck_memory[BASICFUCK_MEMORY_SIZE];
+    static baf_cell_t BASICfuck_memory[BASICFUCK_MEMORY_SIZE];
 
-    uint8_t input_buffer[INPUT_BUFFER_SIZE];
-    uint8_t history_stack[HISTORY_STACK_SIZE];
+    static uint8_t input_buffer[INPUT_BUFFER_SIZE];
+    static uint8_t history_stack[HISTORY_STACK_SIZE];
     // Initalizes the history stack.
     tb_history_stack       = history_stack;
     tb_history_stack_size  = HISTORY_STACK_SIZE;
@@ -202,12 +202,12 @@ int main(void) {
                "Enter '!' to EXIT\n");
 
     while (true) {
-        // Run.
+        // Read.
         (void)fputs("YOUR WILL? ", stdout);
         tb_edit_buffer(input_buffer, INPUT_BUFFER_SIZE - 1);
 
         switch (input_buffer[0]) {
-        case NULL:
+        case '\0':
             continue;                             // empty input.
 
         case '!':
@@ -231,10 +231,8 @@ int main(void) {
         case BAF_COMPILE_UNTERMINATED_LOOP:
             (void)puts("?UNTERMINATED LOOP");
             continue;
-        case BAF_COMPILE_SUCCESS:
-            break;
-        default:
-            assert(false && "Unexpected bytecode compilation result");
+        case BAF_COMPILE_SUCCESS: break;
+        default: assert(0 && "Unreachable");
         }
 
         baf_interpret();

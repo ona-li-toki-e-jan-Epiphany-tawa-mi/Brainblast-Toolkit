@@ -23,7 +23,7 @@
  * Preprocessor parameters:
  * - SCREEN_IMPLEMENTATION - Define in *one* source file to instantiate the
  *                           implementation.
- * - S_BUFFER_SIZE - The size of the string buffer for utoa_fputs.
+ * - SCREEN_BUFFER_SIZE - The size of the string buffer for utoa_fputs.
  */
 
 #ifndef _SCREEN_H
@@ -66,7 +66,7 @@ uint8_t s_blinking_cgetc();
  * zeros (no newline.)
  *
  * NOTE: that the buffer used for this function has the size of
- * S_BUFFER_SIZE, and does not check for overflows; be careful!
+ * SCREEN_BUFFER_SIZE, and does not check for overflows; be careful!
  *
  * @param digit_count - the number of digits to print. If the resulting number
  *                      has less than this number of digits it will be prepended
@@ -113,7 +113,7 @@ uint8_t s_blinking_cgetc() {
 }
 
 void s_utoa_fputs(const size_t digit_count, const uint16_t value, const uint8_t radix) {
-    static uint8_t string_buffer[S_BUFFER_SIZE];
+    static uint8_t string_buffer[SCREEN_BUFFER_SIZE];
     size_t         leading_zeros;
 
     (void)utoa(value, string_buffer, radix);

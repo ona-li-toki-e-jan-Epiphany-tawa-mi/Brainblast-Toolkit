@@ -32,8 +32,8 @@ the computer's raw memory that you can control.
 - `<` - Moves to the previous cell.
 - `.` - Displays the value in current cell as a character.
 - `,` - Stores the value of a key from the keyboard into the current cell.
-- `[` - Jumps to corresponding ']' if value of the current cell cell is 0.
-- `]` - Jumps to corresponding '[' if value of the current cell cell is not 0.
+- `[` - Jumps past the corresponding ']' if value of the current cell is 0.
+- `]` - Jumps past the corresponding '[' if value of the current cell is not 0.
 - `)` - Moves to the next location in computer memory.
 - `(` - Moves to the previous location in computer memory.
 - `@` - Reads a value from computer memory into the current cell.

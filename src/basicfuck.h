@@ -34,6 +34,8 @@
 
 
 
+typedef uint8_t baf_cell_t;
+
 typedef uint8_t baf_opcode_t;
 // Ends the current BASICfuck program.
 #define BAF_OPCODE_HALT 0x00U
@@ -104,7 +106,7 @@ typedef uint8_t BAFCompileResult;
 
 // Compiler state.
 extern const uint8_t* baf_compiler_read_buffer;
-extern uint8_t*       baf_compiler_write_buffer;
+extern baf_cell_t*    baf_compiler_write_buffer;
 extern uint16_t       baf_compiler_buffer_size;
 
 /**
@@ -128,11 +130,11 @@ BAFCompileResult baf_compile();
 
 #ifndef BASICFUCK_DISABLE_INTERPRETER
 // Intepreter state.
-extern const uint8_t* baf_interpreter_program_memory;
-extern uint8_t*       baf_interpreter_bfmem;
-extern uint16_t       baf_interpreter_bfmem_size;
-extern uint16_t       baf_interpreter_bfmem_index;
-extern uint8_t*       baf_interpreter_cmem_pointer;
+extern const baf_opcode_t* baf_interpreter_program_memory;
+extern baf_cell_t*         baf_interpreter_bfmem;
+extern uint16_t            baf_interpreter_bfmem_size;
+extern uint16_t            baf_interpreter_bfmem_index;
+extern uint8_t*            baf_interpreter_cmem_pointer;
 
 /**
  * Runs the interpreter with the given bytecode-compiled BASICfuck program,
@@ -199,7 +201,7 @@ void baf_initialize_instruction_opcode_table() {
 // Compiler state.
 const uint8_t*  baf_compiler_read_buffer;
 static uint16_t baf_compiler_read_index;          // an index into the read buffer.
-uint8_t*        baf_compiler_write_buffer;
+baf_opcode_t*   baf_compiler_write_buffer;
 static uint16_t baf_compiler_write_index;         // an index into the write buffer
 uint16_t        baf_compiler_write_buffer_size;
 
@@ -408,7 +410,7 @@ BAFCompileResult baf_compile() {
 #ifndef BASICFUCK_DISABLE_INTERPRETER
 // Interpreter state.
 const uint8_t* baf_interpreter_program_memory;
-uint8_t*       baf_interpreter_bfmem;
+baf_cell_t*    baf_interpreter_bfmem;
 uint16_t       baf_interpreter_bfmem_size;
 uint16_t       baf_interpreter_bfmem_index;
 uint8_t*       baf_interpreter_cmem_pointer;
