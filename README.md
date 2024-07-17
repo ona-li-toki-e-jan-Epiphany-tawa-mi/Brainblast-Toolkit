@@ -19,7 +19,7 @@ BASICfuck is a small extension of mine to the brainfuck language that is
 reminiscent of BASIC, and is the language this REPL uses. You can find more
 information about brainfuck at the following link:
 
-https://wikipedia.org/wiki/Brainfuck
+[https://wikipedia.org/wiki/Brainfuck](https://wikipedia.org/wiki/Brainfuck)
 
 In addition to the normal cell memory of brainfuck, BASICfuck has a pointer into
 the computer's raw memory that you can control.
@@ -66,8 +66,8 @@ ENTER/RETURN:
 
 ## How to build
 
-You will need make and the cc65 toolchain (https://cc65.github.io). There is a
-`flake.nix` you can use with `nix develop path:.` to get them.
+You will need make and the cc65 toolchain ([https://cc65.github.io](https://cc65.github.io)).
+There is a `flake.nix` you can use with `nix develop path:.` to get them.
 
 There are configuration options you can change in `config.sh`, mainly for memory
 sizes.
@@ -97,8 +97,8 @@ TARGETS=c64 ./build.sh run
 
 You can also grab precompiled binaries off of my Hydra instance at one of the
 following links:
-- I2P: http://oytjumugnwsf4g72vemtamo72vfvgmp4lfsf6wmggcvba3qmcsta.b32.i2p/hydra/jobset/brainblast-toolkit/master/latest-eval
-- Tor: http://4blcq4arxhbkc77tfrtmy4pptf55gjbhlj32rbfyskl672v2plsmjcyd.onion/hydra/jobset/brainblast-toolkit/master/latest-eval
+- I2P: [http://oytjumugnwsf4g72vemtamo72vfvgmp4lfsf6wmggcvba3qmcsta.b32.i2p/hydra/jobset/brainblast-toolkit/master/latest-eval](http://oytjumugnwsf4g72vemtamo72vfvgmp4lfsf6wmggcvba3qmcsta.b32.i2p/hydra/jobset/brainblast-toolkit/master/latest-eval)
+- Tor: [http://4blcq4arxhbkc77tfrtmy4pptf55gjbhlj32rbfyskl672v2plsmjcyd.onion/hydra/jobset/brainblast-toolkit/master/latest-eval](http://4blcq4arxhbkc77tfrtmy4pptf55gjbhlj32rbfyskl672v2plsmjcyd.onion/hydra/jobset/brainblast-toolkit/master/latest-eval)
 
 ## Example programs
 
