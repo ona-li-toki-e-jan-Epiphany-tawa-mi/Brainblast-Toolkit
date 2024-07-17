@@ -8,7 +8,7 @@ BASICfuck is a small extension of mine to the brainfuck language that is
 reminiscent of BASIC, and is the language this REPL uses. You can find more
 information about brainfuck at the following link:
 
-https://wikipedia.org/wiki/Brainfuck
+[https://wikipedia.org/wiki/Brainfuck](https://wikipedia.org/wiki/Brainfuck)
 
 In addition to the normal cell memory of brainfuck, BASICfuck has a pointer into
 the computer's raw memory that you can control.
@@ -43,7 +43,8 @@ ENTER/RETURN:
 
 ## How to build
 
-At the time of development, I used CBM prg Studio (https://www.ajordison.co.uk).
+At the time of development, I used CBM prg Studio
+([https://www.ajordison.co.uk](https://www.ajordison.co.uk))
 to create the .prg file. I don't remember how the process went, but it shouldn't
 be too hard to figure out.
 
