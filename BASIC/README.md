@@ -100,8 +100,3 @@ if it is not 0, then a forward slash will be printed.
 
 The data is random enough *some* of the time. You will find large areas with
 only one type of slash.
-
-## Links
-
-Demonstration:<br>
-https://odysee.com/BASICfuck-Demonstration---a-Brainfuck-REPL-for-the-Commodore-64:e0e5115474fe6334db53f93302e35adb86c45e6a?r=HYroMZaqrVN4gL5oSJ35gcTgt3K56r39
