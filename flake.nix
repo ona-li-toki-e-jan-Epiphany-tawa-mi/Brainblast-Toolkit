@@ -26,18 +26,19 @@
 
   inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-23.11";
 
-  outputs = { self, nixpkgs }:
-    let
-      lib = nixpkgs.lib;
+  outputs = { nixpkgs, ... }:
+    let inherit (nixpkgs.lib) genAttrs systems;
 
-      forSystems = f: lib.genAttrs lib.systems.flakeExposed (system: f {
-        pkgs = import nixpkgs { inherit system; };
-      });
-    in
-      {
-        devShells = forSystems ({ pkgs }: {
-          default = with pkgs; (buildFHSEnv {
+        forSystems = f: genAttrs systems.flakeExposed (system: f {
+          pkgs = import nixpkgs { inherit system; };
+        });
+    in {
+      devShells = forSystems ({ pkgs, ... }:
+        let inherit (pkgs) buildFHSEnv;
+        in {
+          default = (buildFHSEnv {
             name = "brainblast-toolkit-build-environment";
+
             targetPkgs = pkgs: with pkgs; [
               cc65
 
@@ -46,6 +47,6 @@
               atari800
             ];
           }).env;
-        });
-      };
-  }
+      });
+    };
+}
