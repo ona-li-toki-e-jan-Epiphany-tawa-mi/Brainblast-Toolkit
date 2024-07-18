@@ -49,28 +49,6 @@
 
 
 
-// Gets name of the key controls for the user.
-#if defined(__CBM__)
-#define STOP_KEY_EQUIVALENT  "STOP"
-#define HOME_KEY_EQUIVALENT  "HOME"
-#define CLEAR_KEY_EQUIVALENT "CLR"
-#if defined(__PET__)
-#define F1_KEY_EQUIVALENT    "\x5F (left arrow character)"
-#define F2_KEY_EQUIVALENT    "\x5E (up arrow character)"
-#else // __PET__
-#define F1_KEY_EQUIVALENT    "F1"
-#define F2_KEY_EQUIVALENT    "F2"
-#endif
-#elif defined(__ATARI__) // __CBM__
-#define HOME_KEY_EQUIVALENT  "DELLINE (SHIFT+BACKSPACE)"
-#define STOP_KEY_EQUIVALENT  "ESC"
-#define CLEAR_KEY_EQUIVALENT "CLEAR"
-#define F1_KEY_EQUIVALENT    "F1 (ATARI+1)"
-#define F2_KEY_EQUIVALENT    "F2 (ATARI+2)"
-#else // __ATARI__
-#error build target not supported
-#endif
-
 /**
  * Runs the help menu, telling the user about the REPL and it's functions.
  */
@@ -84,13 +62,13 @@ static void help_menu() {
                "\n"
                "REPL Controls (Keypress):\n"
                "\n"
-               STOP_KEY_EQUIVALENT " - Cancel input and start new line like C-c.\n"
-               HOME_KEY_EQUIVALENT " - Move to start of line.\n"
-               CLEAR_KEY_EQUIVALENT " - Clear screen and line.\n"
-               F1_KEY_EQUIVALENT " - Previous history item.\n"
-               F2_KEY_EQUIVALENT " - Next history item.\n"
+               KEYBOARD_STOP_STRING " - Cancel input and start new line like C-c.\n"
+               KEYBOARD_HOME_STRING " - Move to start of line.\n"
+               KEYBOARD_CLEAR_STRING " - Clear screen and line.\n"
+               KEYBOARD_F1_STRING " - Previous history item.\n"
+               KEYBOARD_F2_STRING " - Next history item.\n"
                "\n"
-               STOP_KEY_EQUIVALENT " - Abort BASICfuck program.\n"
+               KEYBOARD_STOP_STRING " - Abort BASICfuck program.\n"
                "\n"
                "Press ANY KEY to CONTINUE");
     (void)s_wrapped_cgetc();
@@ -169,7 +147,7 @@ static void display_bytecode() {
 
 
 
-#define INPUT_BUFFER_SIZE 256U
+#define INPUT_BUFFER_SIZE 256
 
 int main(void) {
     static baf_cell_t BASICfuck_memory[BASICFUCK_MEMORY_SIZE];
