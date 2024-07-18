@@ -106,7 +106,7 @@ static void help_menu() {
 
 
 // Memory for the compiled bytecode of entered BASICfuck code.
-#define PROGRAM_MEMORY_SIZE 256U
+#define PROGRAM_MEMORY_SIZE 256
 static baf_opcode_t program_memory[PROGRAM_MEMORY_SIZE];
 
 /**

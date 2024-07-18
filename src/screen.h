@@ -45,8 +45,7 @@
  * The width and height of the screen. Must be initalized at some point with
  * screensize(), or some other method, else they will be set to 0.
  */
-extern uint8_t s_width
-             , s_height;
+extern uint8_t s_width, s_height;
 
 /**
  * On some machines, cgetc() doesn't block like expected, and instead returns
@@ -103,13 +102,13 @@ uint8_t s_wrapped_cgetc() {
     uint8_t character = 0;
     do {
         character = cgetc();
-    } while (0 == character);
+    } while ('\0' == character);
 
     return character;
 }
 
 uint8_t s_blinking_cgetc() {
-    uint8_t character;
+    uint8_t character = 0;
 
     cursor(true);
     character = s_wrapped_cgetc();
@@ -120,7 +119,7 @@ uint8_t s_blinking_cgetc() {
 
 void s_utoa_fputs(const size_t digit_count, const uint16_t value, const uint8_t radix) {
     static uint8_t string_buffer[SCREEN_BUFFER_SIZE];
-    size_t         leading_zeros;
+    size_t         leading_zeros = 0;
 
     (void)utoa(value, string_buffer, radix);
 
@@ -144,7 +143,7 @@ bool s_is_control_character(const uint8_t character) {
         || (character >= 0x8B && character <= 0x8F)
         || character >= 0xFD;
 #else
-#error build target not supported
+#  error build target not supported
 #endif
 }
 
