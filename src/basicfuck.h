@@ -110,7 +110,6 @@ typedef uint8_t BAFCompileResult;
 #define BAF_COMPILE_OUT_OF_MEMORY     1
 #define BAF_COMPILE_UNTERMINATED_LOOP 2
 
-// Compiler state.
 typedef struct {
     // Buffer to read BASICfuck code from.
     const uint8_t* read_buffer;
@@ -129,30 +128,26 @@ typedef struct {
  *         BAF_COMPILE_UNTERMINATED_LOOP if the program has an unterminated
  *         loop.
  */
-BAFCompileResult baf_compile(const BAFCompiler* compiler);
+BAFCompileResult baf_compile(const BAFCompiler *const compiler);
 #endif // BASICFUCK_DISABLE_COMPILER
 
 
 #ifndef BASICFUCK_DISABLE_INTERPRETER
-// Intepreter state.
-extern const baf_opcode_t* baf_interpreter_program_memory;
-extern baf_cell_t*         baf_interpreter_bfmem;
-extern uint16_t            baf_interpreter_bfmem_size;
-extern uint16_t            baf_interpreter_bfmem_index;
-extern uint8_t*            baf_interpreter_cmem_pointer;
+typedef struct {
+    const baf_opcode_t* program_buffer;
+    baf_cell_t*         basicfuck_cell_pointer;
+    baf_cell_t*         basicfuck_cell_start_pointer;
+    baf_cell_t*         basicfuck_cell_end_pointer;
+    uint8_t*            computer_memory_pointer;
+} BAFInterpreter;
 
 /**
  * Runs the interpreter with the given bytecode-compiled BASICfuck program,
  * leaving the given starting state off wherever it the program finished at.
  *
- * @param baf_interpreter_program_memory (global) - the BASICfuck program.
- * @param baf_interpreter_bfmem (global) - the BASICfuck memory buffer.
- * @param baf_interpreter_bfmem_size (global) - the size of the memory buffer.
- * @param baf_interpreter_bfmem_index (global) - the current index in BASICfuck
- *        memory.
- * @param baf_interpreter_cmem_pointer (global) - the current pointer into RAM.
+ * @param interpreter - interpreter state.
  */
-void baf_interpret();
+void baf_interpret(BAFInterpreter *const interpreter);
 #endif // BASICFUCK_DISABLE_INTERPRETER
 
 
@@ -358,9 +353,9 @@ static bool baf_compile_second_pass() {
 
                 if (loop_depth == 0) {
                     // Sets JEQ instruction to jump to accomanying JNE.
-                    *(uint16_t*)(baf_compiler_write_pointer + 1) = seek_pointer - write_start_pointer;
+                    *(baf_opcode_t**)(baf_compiler_write_pointer + 1) = seek_pointer;
                     // And vice-versa.
-                    *(uint16_t*)(seek_pointer + 1) = baf_compiler_write_pointer - write_start_pointer;
+                    *(baf_opcode_t**)(seek_pointer + 1) = baf_compiler_write_pointer;
 
                     break;
                 }
@@ -388,7 +383,7 @@ static bool baf_compile_second_pass() {
     return true;
 }
 
-BAFCompileResult baf_compile(const BAFCompiler* compiler) {
+BAFCompileResult baf_compile(const BAFCompiler *const compiler) {
     baf_compiler_read_pointer      = compiler->read_buffer;
     baf_compiler_write_pointer     = compiler->write_buffer;
     // The last location is reserved for end of program.
@@ -406,28 +401,28 @@ BAFCompileResult baf_compile(const BAFCompiler* compiler) {
 
 #ifndef BASICFUCK_DISABLE_INTERPRETER
 // Interpreter state.
-const uint8_t* baf_interpreter_program_memory;
-baf_cell_t*    baf_interpreter_bfmem;
-uint16_t       baf_interpreter_bfmem_size;
-uint16_t       baf_interpreter_bfmem_index;
-uint8_t*       baf_interpreter_cmem_pointer;
+static const baf_opcode_t* baf_interpreter_program_pointer     = NULL;
+static baf_cell_t*         baf_interpreter_bfmem_pointer       = NULL;
+static baf_cell_t*         baf_interpreter_bfmem_start_pointer = NULL;
+static baf_cell_t*         baf_interpreter_bfmem_end_pointer   = NULL;
+static uint8_t*            baf_interpreter_cmem_pointer        = NULL;
 
 // Global variables for exchaning values with inline assembler.
-static uint8_t  baf_interpreter_register_a
-             ,  baf_interpreter_register_x
-             ,  baf_interpreter_register_y;
+static uint8_t baf_interpreter_register_a = 0;
+static uint8_t baf_interpreter_register_x = 0;
+static uint8_t baf_interpreter_register_y = 0;
 
 /**
  * Runs the execute part of the BASICfuck execute instruction.
  *
  * @param baf_interpreter_register_a (global) - the value to place in the A
- *                                              register.
+ *        register.
  * @param baf_interpreter_register_x (global) - the value to place in the X
- *                                              register.
+ *        register.
  * @param baf_interpreter_register_y (global) - the value to place in the Y
- *                                              register.
+ *        register.
  * @param baf_interpreter_cmem_pointer (global) - the address to execute as a
- *                                                subroutine.
+ *        subroutine.
  */
 static void baf_execute() {
     // Overwrites address of subroutine to call in next assembly block with the
@@ -453,11 +448,9 @@ static void baf_execute() {
     __asm__ volatile ("jmp     %g", ljump_instruction);
 }
 
-void baf_interpret() {
-    baf_opcode_t opcode;
-    uint8_t      argument;
-
-    uint16_t program_index = 0;
+void baf_interpret(BAFInterpreter *const interpreter) {
+    baf_opcode_t opcode   = 0;
+    uint8_t      argument = 0;
 
     static const void *const jump_table[] = {
         &&lopcode_halt,                           // BAF_OPCODE_HALT.
@@ -476,16 +469,23 @@ void baf_interpret() {
         &&lopcode_execute                         // BAF_OPCODE_EXECUTE.
     };
 
+    // Loads interpeter settings into globals for faster access.
+    baf_interpreter_program_pointer     = interpreter->program_buffer;
+    baf_interpreter_bfmem_pointer       = interpreter->basicfuck_cell_pointer;
+    baf_interpreter_bfmem_start_pointer = interpreter->basicfuck_cell_start_pointer;
+    baf_interpreter_bfmem_end_pointer   = interpreter->basicfuck_cell_end_pointer;
+    baf_interpreter_cmem_pointer        = interpreter->computer_memory_pointer;
+
 
     while (true) {
-        if (kbhit() != 0 && cgetc() == KEYBOARD_STOP) {
+        if (0 != kbhit() && KEYBOARD_STOP == cgetc()) {
             puts("?ABORT");
             break;
         }
 
 
-        opcode   = baf_interpreter_program_memory[program_index];
-        argument = baf_interpreter_program_memory[program_index+1];
+        opcode   = *baf_interpreter_program_pointer;
+        argument = baf_interpreter_program_pointer[1];
         assert(opcode < sizeof(jump_table)/sizeof(jump_table[0]) && "Unknown opcode");
         goto *jump_table[opcode];
 
@@ -493,28 +493,28 @@ void baf_interpret() {
         break;
 
     lopcode_increment:
-        baf_interpreter_bfmem[baf_interpreter_bfmem_index] += argument;
+        *baf_interpreter_bfmem_pointer += argument;
         goto lfinish_interpreter_cycle;
 
     lopcode_decrement:
-        baf_interpreter_bfmem[baf_interpreter_bfmem_index] -= argument;
+        *baf_interpreter_bfmem_pointer -= argument;
         goto lfinish_interpreter_cycle;
 
     lopcode_bfmem_left:
-        if (baf_interpreter_bfmem_index > argument) {
-            baf_interpreter_bfmem_index -= argument;
+        if (baf_interpreter_bfmem_pointer > baf_interpreter_bfmem_start_pointer + argument) {
+            baf_interpreter_bfmem_pointer -= argument;
         } else {
-            baf_interpreter_bfmem_index = 0;
+            baf_interpreter_bfmem_pointer = baf_interpreter_bfmem_start_pointer;
         }
         goto lfinish_interpreter_cycle;
 
     lopcode_bfmem_right:
-        if (baf_interpreter_bfmem_index + argument < baf_interpreter_bfmem_size)
-            baf_interpreter_bfmem_index += argument;
+        if (baf_interpreter_bfmem_pointer + argument < baf_interpreter_bfmem_end_pointer)
+            baf_interpreter_bfmem_pointer += argument;
         goto lfinish_interpreter_cycle;
 
     lopcode_print:
-        (void)putchar(baf_interpreter_bfmem[baf_interpreter_bfmem_index]);
+        (void)putchar(*baf_interpreter_bfmem_pointer);
         goto lfinish_interpreter_cycle;
 
     lopcode_input:
@@ -523,29 +523,29 @@ void baf_interpret() {
             puts("?ABORT");
             break;
         };
-        baf_interpreter_bfmem[baf_interpreter_bfmem_index] = argument;
+        *baf_interpreter_bfmem_pointer = argument;
         goto lfinish_interpreter_cycle;
 
     lopcode_jeq:
-        if (baf_interpreter_bfmem[baf_interpreter_bfmem_index] == 0) {
-            program_index = (uint16_t)argument
-                          + ((uint16_t)baf_interpreter_program_memory[program_index+2] << 8);
+        if (0 == *baf_interpreter_bfmem_pointer) {
+            baf_interpreter_program_pointer =
+                *(baf_opcode_t**)(baf_interpreter_program_pointer + 1);
         }
         goto lfinish_interpreter_cycle;
 
     lopcode_jne:
-        if (baf_interpreter_bfmem[baf_interpreter_bfmem_index] != 0) {
-            program_index = (uint16_t)argument
-                          + ((uint16_t)baf_interpreter_program_memory[program_index+2] << 8);
+        if (0 != *baf_interpreter_bfmem_pointer) {
+            baf_interpreter_program_pointer =
+                *(baf_opcode_t**)(baf_interpreter_program_pointer + 1);
         }
         goto lfinish_interpreter_cycle;
 
     lopcode_cmem_read:
-        baf_interpreter_bfmem[baf_interpreter_bfmem_index] = *baf_interpreter_cmem_pointer;
+        *baf_interpreter_bfmem_pointer = *baf_interpreter_cmem_pointer;
         goto lfinish_interpreter_cycle;
 
     lopcode_cmem_write:
-        *baf_interpreter_cmem_pointer = baf_interpreter_bfmem[baf_interpreter_bfmem_index];
+        *baf_interpreter_cmem_pointer = *baf_interpreter_bfmem_pointer;
         goto lfinish_interpreter_cycle;
 
     lopcode_cmem_left:
@@ -565,20 +565,27 @@ void baf_interpret() {
         goto lfinish_interpreter_cycle;
 
     lopcode_execute:
-        baf_interpreter_register_a = baf_interpreter_bfmem[baf_interpreter_bfmem_index];
-        baf_interpreter_register_x = baf_interpreter_bfmem[baf_interpreter_bfmem_index+1];
-        baf_interpreter_register_y = baf_interpreter_bfmem[baf_interpreter_bfmem_index+2];
+        baf_interpreter_register_a = *baf_interpreter_bfmem_pointer;
+        baf_interpreter_register_x = baf_interpreter_bfmem_pointer[1];
+        baf_interpreter_register_y = baf_interpreter_bfmem_pointer[2];
         baf_execute();
-        baf_interpreter_bfmem[baf_interpreter_bfmem_index]   = baf_interpreter_register_a;
-        baf_interpreter_bfmem[baf_interpreter_bfmem_index+1] = baf_interpreter_register_x;
-        baf_interpreter_bfmem[baf_interpreter_bfmem_index+2] = baf_interpreter_register_y;
+        *baf_interpreter_bfmem_pointer   = baf_interpreter_register_a;
+        baf_interpreter_bfmem_pointer[1] = baf_interpreter_register_x;
+        baf_interpreter_bfmem_pointer[2] = baf_interpreter_register_y;
         goto lfinish_interpreter_cycle;
 
 
     lfinish_interpreter_cycle:
         // Jumped to after an opcode has been executed.
-        program_index += baf_opcode_size_table[opcode];
+        baf_interpreter_program_pointer += baf_opcode_size_table[opcode];
     }
+
+
+    // Writes back mutable interpreter state.
+    interpreter->basicfuck_cell_pointer       = baf_interpreter_bfmem_pointer;
+    interpreter->basicfuck_cell_start_pointer = baf_interpreter_bfmem_start_pointer;
+    interpreter->basicfuck_cell_end_pointer   = baf_interpreter_bfmem_end_pointer;
+    interpreter->computer_memory_pointer      = baf_interpreter_cmem_pointer;
 }
 #endif // BASICFUCK_DISABLE_INTERPRETER
 

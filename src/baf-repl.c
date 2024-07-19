@@ -113,7 +113,7 @@ static baf_opcode_t program_memory[PROGRAM_MEMORY_SIZE];
  * Displays a readout of the bytecode of the last program to the user. Holding
  * space will slow down the printing.
  *
- * @param program (global) - the program buffer.
+ * @param program_memory (global) - the program buffer.
  */
 static void display_bytecode() {
     uint8_t i = 0;
@@ -130,7 +130,7 @@ static void display_bytecode() {
 
             // Prints addresses.
             (void)fputs("\n$", stdout);
-            s_utoa_fputs(4, i, 16);
+            s_utoa_fputs(4, (uint16_t)program_memory + i, 16);
             (void)putchar(':');
         }
         // Prints values.
@@ -151,14 +151,21 @@ static void display_bytecode() {
 
 int main(void) {
     static baf_cell_t BASICfuck_memory[BASICFUCK_MEMORY_SIZE];
+    BAFCompiler       compiler;
+    BAFInterpreter    interpreter;
 
     static uint8_t input_buffer[INPUT_BUFFER_SIZE];
     static uint8_t history_stack[HISTORY_STACK_SIZE];
 
-    BAFCompiler compiler;
     compiler.read_buffer       = input_buffer;
     compiler.write_buffer      = program_memory;
     compiler.write_buffer_size = PROGRAM_MEMORY_SIZE;
+
+    interpreter.program_buffer               = program_memory;
+    interpreter.basicfuck_cell_pointer       = BASICfuck_memory;
+    interpreter.basicfuck_cell_start_pointer = BASICfuck_memory;
+    interpreter.basicfuck_cell_end_pointer   = BASICfuck_memory + BASICFUCK_MEMORY_SIZE;
+    interpreter.computer_memory_pointer      = 0;
 
     // Initalizes the history stack.
     tb_history_stack       = history_stack;
@@ -169,13 +176,6 @@ int main(void) {
     screensize(&s_width, &s_height);
     // Initializes the opcode table in basicfuck.h.
     baf_initialize_instruction_opcode_table();
-
-    // Initializes the interpreter.
-    baf_interpreter_program_memory = program_memory;
-    baf_interpreter_bfmem          = BASICfuck_memory;
-    baf_interpreter_bfmem_size     = BASICFUCK_MEMORY_SIZE;
-    baf_interpreter_bfmem_index    = 0;
-    baf_interpreter_cmem_pointer   = 0;
 
 
     clrscr();
@@ -220,14 +220,17 @@ int main(void) {
         default: assert(0 && "Unreachable");
         }
 
-        baf_interpret();
+        baf_interpret(&interpreter);
 
-        // Prints cell value.
-        s_utoa_fputs(3, baf_interpreter_bfmem[baf_interpreter_bfmem_index], 10);
+        // Print.
+        s_utoa_fputs(3, *interpreter.basicfuck_cell_pointer, 10);
         (void)fputs(" (Cell ", stdout);
-        s_utoa_fputs(5, baf_interpreter_bfmem_index, 10);
+        s_utoa_fputs( 5
+                    , (uint16_t)(interpreter.basicfuck_cell_pointer
+                                 - interpreter.basicfuck_cell_start_pointer)
+                    , 10);
         (void)fputs(", Memory $", stdout);
-        s_utoa_fputs(4, (uint16_t)baf_interpreter_cmem_pointer, 16);
+        s_utoa_fputs(4, (uint16_t)interpreter.computer_memory_pointer, 16);
         (void)puts(")");
     }
  lexit_repl:
