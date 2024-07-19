@@ -34,6 +34,11 @@ Then, run the following command:
 
 Builds for the Commodore 64. Specify the TARGETS environment variable to build
 for a paticular system (see `build.sh` for available targets,) or run the
+following command to build for all targets:
+
+```shell
+./build-all.sh
+```
 
 Resulting binaries can be found in the directory with the name of the build
 target.
