@@ -154,6 +154,12 @@ int main(void) {
 
     static uint8_t input_buffer[INPUT_BUFFER_SIZE];
     static uint8_t history_stack[HISTORY_STACK_SIZE];
+
+    BAFCompiler compiler;
+    compiler.read_buffer       = input_buffer;
+    compiler.write_buffer      = program_memory;
+    compiler.write_buffer_size = PROGRAM_MEMORY_SIZE;
+
     // Initalizes the history stack.
     tb_history_stack       = history_stack;
     tb_history_stack_size  = HISTORY_STACK_SIZE;
@@ -163,11 +169,6 @@ int main(void) {
     screensize(&s_width, &s_height);
     // Initializes the opcode table in basicfuck.h.
     baf_initialize_instruction_opcode_table();
-
-    // Initalizes the compiler.
-    baf_compiler_read_buffer       = input_buffer;
-    baf_compiler_write_buffer      = program_memory;
-    baf_compiler_write_buffer_size = PROGRAM_MEMORY_SIZE;
 
     // Initializes the interpreter.
     baf_interpreter_program_memory = program_memory;
@@ -208,7 +209,7 @@ int main(void) {
         }
 
         // Evaluate.
-        switch (baf_compile()) {
+        switch (baf_compile(&compiler)) {
         case BAF_COMPILE_OUT_OF_MEMORY:
             (void)puts("?OUT OF MEMORY");
             continue;
