@@ -23,4 +23,4 @@
 # 3. This notice may not be removed or altered from any source
 # distribution.
 
-TARGETS="c64 c128 pet plus4 cx16 atari atarixl" ./build.sh "$@"
+TARGETS=$(./build.sh targets) ./build.sh "$@"

@@ -25,21 +25,35 @@
 #
 # You can use the following command to build this/these derivation(s):
 #   nix-build release.nix -A <attribute>
-# But you should probably use nix-shell + make instead.
 
 { nixpkgs ? builtins.fetchTarball "https://github.com/NixOS/nixpkgs/tarball/nixos-unstable"
-, targets ? [ "c64" "c128" "pet" "plus4" "cx16" "atari" "atarixl" ]
+, targets ? null
 }:
 
 let pkgs = import nixpkgs {};
     inherit (pkgs.stdenv) mkDerivation;
-    inherit (pkgs.lib) genAttrs;
+    inherit (pkgs.lib) genAttrs splitString;
+    inherit (builtins) readFile;
+
+    baseName = "brainblast-toolkit";
+    src      = ./.;
+
+    buildTargets = if null != targets
+                   then targets
+                   else splitString " " (readFile
+                     (mkDerivation {
+                       name = "${baseName}-fetch-targets";
+                       inherit src;
+                       buildPhase =''
+                         ./build.sh targets > $out
+                       '';
+                     }));
 in
 {
-  binaryTarball = genAttrs targets (target: mkDerivation rec {
-    name = "brainblast-toolkit";
+  binaryTarball = genAttrs buildTargets (target: mkDerivation rec {
+    name = "${baseName}-${target}";
 
-    src = ./.;
+    inherit src;
 
     nativeBuildInputs = with pkgs; [ cc65 ];
 

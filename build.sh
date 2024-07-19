@@ -46,26 +46,33 @@
 #       emulator: atari800)
 #
 # Available commands:
+# - ./build.sh targets
+#     Lists availabe build targets
 # - ./build.sh OR ./build.sh build
-#     Builds binaries for given TARGET.
+#     Builds binaries for given TARGETS.
 # - ./build.sh assembly
-#     Builds assembly for given TARGET for analysis.
+#     Builds assembly for given TARGETS for analysis.
 # - ./build.sh run
-#     Runs the REPL binary for given TARGET in an emulator.
+#     Runs the REPL binary for given TARGETS in an emulator.
 # - ./build.sh clean
-#     Deletes built files.
+#     Deletes built files from given TARGETS.
 
 # Error on unset variables.
 set -u
 
 
 
-TARGETS=${TARGETS:-c64}
+if [ 0 -ne $# ] && [ targets = "$1" ]; then
+    echo c64 c128 pet plus4 cx16 atari atarixl
+    exit 0
+fi
+
+
 
 # Imports build configuration.
 . ./config.sh || exit 1
 
-
+TARGETS=${TARGETS:-c64}
 
 for TARGET in $TARGETS; do
     if [ c64 = "$TARGET" ]; then
@@ -145,7 +152,3 @@ for TARGET in $TARGETS; do
 
     set +x
 done
-
-
-
-exit 0
