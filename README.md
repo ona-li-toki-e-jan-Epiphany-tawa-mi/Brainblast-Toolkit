@@ -1,8 +1,3 @@
-View build status/get prebuilt binaries:
-
-- I2P: [http://oytjumugnwsf4g72vemtamo72vfvgmp4lfsf6wmggcvba3qmcsta.b32.i2p/hydra/jobset/brainblast-toolkit/master/latest-eval](http://oytjumugnwsf4g72vemtamo72vfvgmp4lfsf6wmggcvba3qmcsta.b32.i2p/hydra/jobset/brainblast-toolkit/master/latest-eval)
-- Tor: [http://4blcq4arxhbkc77tfrtmy4pptf55gjbhlj32rbfyskl672v2plsmjcyd.onion/hydra/jobset/brainblast-toolkit/master/latest-eval](http://4blcq4arxhbkc77tfrtmy4pptf55gjbhlj32rbfyskl672v2plsmjcyd.onion/hydra/jobset/brainblast-toolkit/master/latest-eval)
-
 # Brainblast-Toolkit
 
 A brainfuck/BASICfuck REPL for 6502 machines.
