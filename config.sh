@@ -18,7 +18,7 @@
 # Brainblast-Toolkit. If not, see <https://www.gnu.org/licenses/>.
 
 # Metadata.
-export TOOLKIT_VERSION=0.1.1
+export TOOLKIT_VERSION=0.1.2
 
 # The size, in bytes, of the stack used to recall previous user inputs.
 export HISTORY_STACK_SIZE=1028

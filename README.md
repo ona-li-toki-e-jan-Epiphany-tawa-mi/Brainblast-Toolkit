@@ -157,8 +157,4 @@ only one type of slash.
 
 ## Release notes
 
-- Optimizatons.
-- Improved build system.
-- The `,` instruction now stops program execution when the STOP key is pressed.
-- Relicensed as zlib.
-- Bytecode now uses absolute addressing.
+- Restored GPL; zlib was invalid. Disregard zlib in previous commits.
