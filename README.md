@@ -157,4 +157,4 @@ only one type of slash.
 
 ## Release notes
 
-- Restored GPL; zlib was invalid. Disregard zlib in previous commits.
+- Relicensed as GPLv3+.
