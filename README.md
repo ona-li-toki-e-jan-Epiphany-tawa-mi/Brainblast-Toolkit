@@ -19,7 +19,7 @@ Dependencies:
 
 - cc65 - [https://cc65.github.io](https://cc65.github.io)
 
-There is a `flake.nix` you can use with `nix develop path:.` to get them.
+There is a `flake.nix` you can use with `nix develop` to get them.
 
 Then, run the following command:
 
