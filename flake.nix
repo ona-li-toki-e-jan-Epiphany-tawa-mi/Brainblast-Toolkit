@@ -21,11 +21,12 @@
   inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
 
   outputs = { nixpkgs, ... }:
-    let inherit (nixpkgs.lib) genAttrs systems;
+    let
+      inherit (nixpkgs.lib) genAttrs systems;
 
-        forSystems = f: genAttrs systems.flakeExposed (system: f {
-          pkgs = import nixpkgs { inherit system; };
-        });
+      forSystems = f:
+        genAttrs systems.flakeExposed
+        (system: f { pkgs = import nixpkgs { inherit system; }; });
     in {
       devShells = forSystems ({ pkgs, ... }:
         let inherit (pkgs) buildFHSEnv;
@@ -33,14 +34,16 @@
           default = (buildFHSEnv {
             name = "brainblast-toolkit-build-environment";
 
-            targetPkgs = pkgs: with pkgs; [
-              cc65
+            targetPkgs = pkgs:
+              with pkgs; [
+                cc65
 
-              vice
-              x16-emulator x16-rom
-              atari800
-            ];
+                vice
+                x16-emulator
+                x16-rom
+                atari800
+              ];
           }).env;
-      });
+        });
     };
 }
