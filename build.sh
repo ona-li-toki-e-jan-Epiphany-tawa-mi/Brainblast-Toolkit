@@ -2,7 +2,7 @@
 
 # This file is part of Brainblast-Toolkit.
 #
-# Copyright (c) 2024 ona-li-toki-e-jan-Epiphany-tawa-mi
+# Copyright (c) 2024-2025 ona-li-toki-e-jan-Epiphany-tawa-mi
 #
 # Brainblast-Toolkit is free software: you can redistribute it and/or modify it
 # under the terms of the GNU General Public License as published by the Free
@@ -108,15 +108,14 @@ for TARGET in $TARGETS; do
     # shellcheck disable=SC2089 # We want \" treated literally.
     ALL_CFLAGS="$CFLAGS -t $TARGET -I $CC65_DIRECTORY/include --asm-include-dir $CC65_DIRECTORY/asminc -L $CC65_DIRECTORY/lib --cfg-path $CC65_DIRECTORY/cfg  -D BASICFUCK_MEMORY_SIZE=${BASICFUCK_MEMORY_SIZE}U -D HISTORY_STACK_SIZE=${HISTORY_STACK_SIZE}U -D TOOLKIT_VERSION=\"$TOOLKIT_VERSION\""
 
-    SOURCE_DIRECTORY=src
-    SOURCE=$SOURCE_DIRECTORY/baf-repl.c
+    SOURCE=baf-repl.c
 
     OUT_DIRECTORY=$TARGET
     REPL_OUT=$OUT_DIRECTORY/baf-repl.$BINARY_FILE_EXTENSION
 
 
     if [ 0 -eq $# ] || [ build = "$1" ]; then
-        object=${SOURCE%.c}.o; object=${object#"${SOURCE_DIRECTORY}/"}
+        object=${SOURCE%.c}.o
         set -x
         # shellcheck disable=SC2086,SC2090 # We want word splitting.
         $CC $ALL_CFLAGS -c -o "$object" "$SOURCE"  || exit 1
@@ -125,7 +124,7 @@ for TARGET in $TARGETS; do
         $CC $ALL_CFLAGS -o "$REPL_OUT" "$object"   || exit 1
 
     elif [ assembly = "$1" ]; then
-        assembly=${SOURCE%.c}.s; assembly=${assembly#"${SOURCE_DIRECTORY}/"}
+        assembly=${SOURCE%.c}.s;
         set -x
         # shellcheck disable=SC2086,SC2090 # We want word splitting.
         $CC $ALL_CFLAGS -g -S -o "$assembly" "$SOURCE" || exit 1
