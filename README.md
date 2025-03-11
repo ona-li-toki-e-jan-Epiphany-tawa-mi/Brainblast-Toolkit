@@ -35,8 +35,8 @@ following command to build for all targets:
 ./build-all.sh
 ```
 
-Resulting binaries can be found in the directory with the name of the build
-target.
+Resulting binaries can be found in `out/` in the directory with the name of the
+build target.
 
 There are build configuration options you can change in `config.sh`, mainly for
 memory allocation.
