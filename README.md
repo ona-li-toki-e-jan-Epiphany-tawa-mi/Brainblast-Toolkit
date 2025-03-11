@@ -154,7 +154,3 @@ printed; if it is not 0, then a forward slash will be printed.
 
 The data is random enough *some* of the time. You will find large areas with
 only one type of slash.
-
-## Release notes
-
-- Relicensed as GPLv3+.
