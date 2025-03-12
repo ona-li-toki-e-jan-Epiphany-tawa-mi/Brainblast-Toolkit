@@ -38,6 +38,28 @@
 #include <unistd.h>
 
 ////////////////////////////////////////////////////////////////////////////////
+// Utilities                                                                   //
+////////////////////////////////////////////////////////////////////////////////
+
+// The width and height of the screen. Must be initalized at some point with
+// screensize(), or some other method, else they will be set to 0.
+static uint8_t width  = 0;
+static uint8_t height = 0;
+
+// On some machines, cgetc() doesn't block like expected, and instead returns
+// immediately. This version adds in a check to ensure the blocking behavior.
+// TODO: add preprocessor stuff to remove extra code when on machine with the
+// blocking behavior.
+static uint8_t wrappedCgetc() {
+    uint8_t character = 0;
+    do {
+        character = cgetc();
+    } while ('\0' == character);
+
+    return character;
+}
+
+////////////////////////////////////////////////////////////////////////////////
 // Keyboard                                                                   //
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -96,65 +118,25 @@
 #endif // #else
 
 ////////////////////////////////////////////////////////////////////////////////
-// Screen                                                                     //
+// Text Buffers                                                               //
 ////////////////////////////////////////////////////////////////////////////////
 
-// The width and height of the screen. Must be initalized at some point with
-// screensize(), or some other method, else they will be set to 0.
-static uint8_t s_width  = 0;
-static uint8_t s_height = 0;
-
-// On some machines, cgetc() doesn't block like expected, and instead returns
-// immediately. This version adds in a check to ensure the blocking behavior.
-static uint8_t s_wrapped_cgetc() {
-    uint8_t character = 0;
-    do {
-        character = cgetc();
-    } while ('\0' == character);
-
-    return character;
-}
-
-// Runs s_wrapped_cgetc() with a blinking cursor.
+// Runs cgetc() with a blinking cursor.
 // To set a blinking cursor (easily,) you need to use the cursor() function from
 // conio.h, but it seems to error with "Illegal function call" or something when
 // used in a complex function, so I have it pulled out into this separate one.
-static uint8_t s_blinking_cgetc() {
+static uint8_t blinkingCgetc() {
     uint8_t character = 0;
 
     cursor(true);
-    character = s_wrapped_cgetc();
+    character = wrappedCgetc();
     cursor(false);
 
     return character;
 }
 
-#define SCREEN_BUFFER_SIZE 6
-// Uses utoa() to convert the value to a string and prints it with leading zeros
-// (no newline.)
-// NOTE: that the buffer used for this function has the size of
-// SCREEN_BUFFER_SIZE, and does not check for overflows; be careful!
-// digit_count - the number of digits to print. If the resulting number has less
-// than this number of digits it will be prepended with zeros. A value of 0
-// disables this and simply prints the number.
-// radix - the base to use to generate the number string.
-static void s_utoa_fputs(const size_t digit_count, const uint16_t value, const uint8_t radix) {
-    static uint8_t string_buffer[SCREEN_BUFFER_SIZE];
-    size_t         leading_zeros = 0;
-
-    utoa(value, string_buffer, radix);
-
-    if (0 != digit_count) {
-        leading_zeros = digit_count - strlen(string_buffer);
-        for (; leading_zeros > 0; --leading_zeros)
-            fputs("0", stdout);
-    }
-
-    fputs(string_buffer, stdout);
-};
-
 // Returns whether the given character is a screen control character.
-static bool s_is_control_character(const uint8_t character) {
+static bool isControlCharacter(const uint8_t character) {
 #if defined(__CBM__)
     // PETSCII character set.
     return (character & 0x7F) < 0x20;
@@ -168,10 +150,6 @@ static bool s_is_control_character(const uint8_t character) {
 #  error build target not supported
 #endif
 }
-
-////////////////////////////////////////////////////////////////////////////////
-// Text Buffers                                                               //
-////////////////////////////////////////////////////////////////////////////////
 
 // Global variables for passing parameters between functions.
 // The buffer currently being edited.
@@ -317,7 +295,7 @@ static void tb_edit_buffer(uint8_t *const buffer, uint8_t buffer_max_index) {
     tb_input_size = 0;
 
     while (true) {
-        key = s_blinking_cgetc();
+        key = blinkingCgetc();
 
         switch (key) {
         // Finalizes the buffer and exits from this function.
@@ -375,7 +353,7 @@ static void tb_edit_buffer(uint8_t *const buffer, uint8_t buffer_max_index) {
         case KEYBOARD_UP:
             // Navigates to the next line up, or to the start of the buffer, if
             // there is no line there.
-            new_cursor = tb_cursor > s_width ? tb_cursor - s_width : 0;
+            new_cursor = tb_cursor > width ? tb_cursor - width : 0;
             for (; tb_cursor > new_cursor; --tb_cursor)
                 putchar(KEYBOARD_LEFT);
 
@@ -384,7 +362,7 @@ static void tb_edit_buffer(uint8_t *const buffer, uint8_t buffer_max_index) {
         case KEYBOARD_DOWN:
             // Navigates to the next line down, or to the end of the filled
             // buffer, if there is no line there.
-            new_cursor = (tb_input_size - tb_cursor) > s_width ? tb_cursor + s_width : tb_input_size;
+            new_cursor = (tb_input_size - tb_cursor) > width ? tb_cursor + width : tb_input_size;
             for (; tb_cursor < new_cursor; ++tb_cursor)
                 putchar(KEYBOARD_RIGHT);
 
@@ -421,7 +399,7 @@ static void tb_edit_buffer(uint8_t *const buffer, uint8_t buffer_max_index) {
 
         // Handles typing characters.
         default:
-            if (s_is_control_character(key))      // filter out unhandled control characters.
+            if (isControlCharacter(key))      // filter out unhandled control characters.
                 break;
             if (tb_cursor > buffer_max_index)
                 break;
@@ -828,7 +806,6 @@ static void baf_interpret(BAFInterpreter *const interpreter) {
             break;
         }
 
-
         opcode   = *baf_interpreter_program_pointer;
         argument = baf_interpreter_program_pointer[1];
         assert(opcode < sizeof(jump_table)/sizeof(jump_table[0]) && "Unknown opcode");
@@ -863,7 +840,7 @@ lopcode_print:
         goto lfinish_interpreter_cycle;
 
 lopcode_input:
-        argument = s_wrapped_cgetc();
+        argument = wrappedCgetc();
         if (KEYBOARD_STOP == argument) {
             puts("?ABORT");
             break;
@@ -936,7 +913,7 @@ lfinish_interpreter_cycle:
 // REPL                                                                       //
 ////////////////////////////////////////////////////////////////////////////////
 
-static void help_menu() {
+static void helpMenu() {
     clrscr();
     puts(
         "REPL Commands (must be at start of line):\n"
@@ -947,17 +924,17 @@ static void help_menu() {
         "\n"
         "REPL Controls (Keypress):\n"
         "\n"
-        KEYBOARD_STOP_STRING " - Cancel input and start new line like C-c.\n"
-        KEYBOARD_HOME_STRING " - Move to start of line.\n"
-        KEYBOARD_CLEAR_STRING " - Clear screen and line.\n"
-        KEYBOARD_F1_STRING " - Previous history item.\n"
-        KEYBOARD_F2_STRING " - Next history item.\n"
+        KEYBOARD_STOP_STRING" - Cancel input and start new line like C-c.\n"
+        KEYBOARD_HOME_STRING" - Move to start of line.\n"
+        KEYBOARD_CLEAR_STRING" - Clear screen and line.\n"
+        KEYBOARD_F1_STRING" - Previous history item.\n"
+        KEYBOARD_F2_STRING" - Next history item.\n"
         "\n"
-        KEYBOARD_STOP_STRING " - Abort BASICfuck program.\n"
+        KEYBOARD_STOP_STRING" - Abort BASICfuck program.\n"
         "\n"
         "Press ANY KEY to CONTINUE"
     );
-    s_wrapped_cgetc();
+    wrappedCgetc();
 
     clrscr();
     puts(
@@ -974,7 +951,7 @@ static void help_menu() {
         "\n"
         "Press ANY KEY to CONTINUE"
     );
-    s_wrapped_cgetc();
+    wrappedCgetc();
 
     clrscr();
     puts(
@@ -991,23 +968,46 @@ static void help_menu() {
         "\n"
         "Press ANY KEY to CONTINUE"
     );
-    s_wrapped_cgetc();
+    wrappedCgetc();
 
     clrscr();
 }
 
+#define SCREEN_BUFFER_SIZE 10
+// Uses utoa() to convert the value to a string and prints it with leading zeros
+// (no newline.)
+// NOTE: the buffer used for this function has the size of SCREEN_BUFFER_SIZE,
+// and does not check for overflows; be careful!
+static void utoaFputs(
+    const size_t digit_count,
+    const uint16_t value,
+    const uint8_t radix
+) {
+    static uint8_t string_buffer[SCREEN_BUFFER_SIZE] = {0};
+    size_t         leading_zeros = 0;
+
+    utoa(value, string_buffer, radix);
+
+    if (0 != digit_count) {
+        leading_zeros = digit_count - strlen(string_buffer);
+        for (; leading_zeros > 0; --leading_zeros) fputs("0", stdout);
+    }
+
+    fputs(string_buffer, stdout);
+};
+
 // Memory for the compiled bytecode of entered BASICfuck code.
 #define PROGRAM_MEMORY_SIZE 256
-static baf_opcode_t program_memory[PROGRAM_MEMORY_SIZE];
+static baf_opcode_t program_memory[PROGRAM_MEMORY_SIZE] = {0};
 
 // Displays a readout of the bytecode of the last program to the user.
 // Holding space will slow down the printing.
 // program_memory (global) - the program buffer.
-static void display_bytecode() {
+static void displayBytecode() {
     uint8_t i = 0;
 
     // Ideally display 16 bytes at a time, but screen real estate is what it is.
-    uint8_t bytes_per_line = (s_width - 7) / 3;
+    uint8_t bytes_per_line = (width - 7) / 3;
     bytes_per_line = bytes_per_line > 16 ? 16 : bytes_per_line;
 
     while (true) {
@@ -1018,12 +1018,12 @@ static void display_bytecode() {
 
             // Prints addresses.
             fputs("\n$", stdout);
-            s_utoa_fputs(4, (uint16_t)program_memory + i, 16);
+            utoaFputs(4, (uint16_t)program_memory + i, 16);
             putchar(':');
         }
         // Prints values.
         putchar(' ');
-        s_utoa_fputs(2, program_memory[i], 16);
+        utoaFputs(2, program_memory[i], 16);
 
         if (i >= PROGRAM_MEMORY_SIZE - 1)
             break;
@@ -1036,12 +1036,12 @@ static void display_bytecode() {
 #define INPUT_BUFFER_SIZE 256
 
 int main(void) {
-    static baf_cell_t BASICfuck_memory[BASICFUCK_MEMORY_SIZE];
-    BAFCompiler       compiler;
-    BAFInterpreter    interpreter;
+    static baf_cell_t     BASICfuck_memory[BASICFUCK_MEMORY_SIZE] = {0};
+    static BAFCompiler    compiler                                = {0};
+    static BAFInterpreter interpreter                             = {0};
 
-    static uint8_t input_buffer[INPUT_BUFFER_SIZE];
-    static uint8_t history_stack[HISTORY_STACK_SIZE];
+    static uint8_t input_buffer[INPUT_BUFFER_SIZE]   = {0};
+    static uint8_t history_stack[HISTORY_STACK_SIZE] = {0};
 
     compiler.read_buffer       = input_buffer;
     compiler.write_buffer      = program_memory;
@@ -1050,8 +1050,9 @@ int main(void) {
     interpreter.program_buffer               = program_memory;
     interpreter.basicfuck_cell_pointer       = BASICfuck_memory;
     interpreter.basicfuck_cell_start_pointer = BASICfuck_memory;
-    interpreter.basicfuck_cell_end_pointer   = BASICfuck_memory + BASICFUCK_MEMORY_SIZE;
-    interpreter.computer_memory_pointer      = 0;
+    interpreter.basicfuck_cell_end_pointer   = BASICfuck_memory +
+        BASICFUCK_MEMORY_SIZE;
+    interpreter.computer_memory_pointer = 0;
 
     // Initalizes the history stack.
     tb_history_stack       = history_stack;
@@ -1059,14 +1060,13 @@ int main(void) {
     tb_history_stack_index = 0;
 
     // Initializes global screen size variables in screen.h.
-    screensize(&s_width, &s_height);
+    screensize(&width, &height);
     // Initializes the opcode table in basicfuck.h.
     baf_initialize_instruction_opcode_table();
 
-
     clrscr();
     puts("Brainblast-Toolkit BASICfuck REPL " TOOLKIT_VERSION "\n");
-    s_utoa_fputs(0, BASICFUCK_MEMORY_SIZE, 10);
+    utoaFputs(0, BASICFUCK_MEMORY_SIZE, 10);
     puts(
         " CELLS FREE\n"
         "\n"
@@ -1089,11 +1089,11 @@ int main(void) {
             goto lexit_repl;
 
         case '?':
-            help_menu();
+            helpMenu();
             continue;
 
         case '#':
-            display_bytecode();
+            displayBytecode();
             continue;
         }
 
@@ -1114,16 +1114,16 @@ int main(void) {
         baf_interpret(&interpreter);
 
         // Print.
-        s_utoa_fputs(3, *interpreter.basicfuck_cell_pointer, 10);
+        utoaFputs(3, *interpreter.basicfuck_cell_pointer, 10);
         fputs(" (Cell ", stdout);
-        s_utoa_fputs(
+        utoaFputs(
             5,
             (uint16_t)(interpreter.basicfuck_cell_pointer
                        - interpreter.basicfuck_cell_start_pointer)
             , 10
         );
         fputs(", Memory $", stdout);
-        s_utoa_fputs(4, (uint16_t)interpreter.computer_memory_pointer, 16);
+        utoaFputs(4, (uint16_t)interpreter.computer_memory_pointer, 16);
         puts(")");
     }
 lexit_repl:
