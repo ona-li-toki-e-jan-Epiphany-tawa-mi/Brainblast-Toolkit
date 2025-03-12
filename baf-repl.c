@@ -914,6 +914,7 @@ static void helpMenu(void) {
         "\n"
         "! - Exits REPL.\n"
         "? - Displays this help menu.\n"
+        "L - Displays license.\n"
         "# - Displays bytecode of last program.\n"
         "\n"
         "REPL Controls (Keypress):\n"
@@ -965,6 +966,46 @@ static void helpMenu(void) {
         "the current and next two cells will be used for the A, X, and Y "
         "registers. Resulting register values will be stored back into the "
         "respective cells.\n"
+        "\n"
+        "Press ANY KEY to CONTINUE"
+    );
+    wrappedCgetc();
+
+    clrscr();
+}
+
+static void licenseMenu(void) {
+    clrscr();
+    puts(
+        "Copyright (c) 2024-2025 ona-li-toki-e-jan-Epiphany-tawa-mi\n"
+        "\n"
+        "Brainblast-Toolkit is free software: you can redistribute it and/or "
+        "modify it under the terms of the GNU General Public License as "
+        "published by the Free Software Foundation, either version 3 of the "
+        "License, or (at your option) any later version.\n"
+        "\n"
+        "Brainblast-Toolkit is distributed in the hope that it will be useful, "
+        "but WITHOUT ANY WARRANTY; without even the implied warranty of "
+        "MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU "
+        "General Public License for more details.\n"
+        "\n"
+        "Press ANY KEY to CONTINUE"
+    );
+    wrappedCgetc();
+
+    clrscr();
+    puts(
+        "You should have received a copy of the GNU General Public License "
+        "along with Brainblast-Toolkit. If not, see "
+        "<https://www.gnu.org/licenses/>.\n"
+        "\n"
+        "Source (paltepuk):\n"
+        "Clearnet - https://paltepuk.xyz/cgit/Brainblast-Toolkit.git/about/\n"
+        "I2P - http://oytjumugnwsf4g72vemtamo72vfvgmp4lfsf6wmggcvba3qmcsta.b32.i2p/cgit/Brainblast-Toolkit.git/about/\n"
+        "Tor - http://4blcq4arxhbkc77tfrtmy4pptf55gjbhlj32rbfyskl672v2plsmjcyd.onion/cgit/Brainblast-Toolkit.git/about/\n"
+        "\n"
+        "Source (GitHub):\n"
+        "Clearnet - https://github.com/ona-li-toki-e-jan-Epiphany-tawa-mi/Brainblast-Toolkit/\n"
         "\n"
         "Press ANY KEY to CONTINUE"
     );
@@ -1060,6 +1101,10 @@ int main(void) {
         }
         case '?': {
             helpMenu();
+            continue;
+        }
+        case 'L': {
+            licenseMenu();
             continue;
         }
         case '#': {
