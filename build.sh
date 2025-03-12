@@ -2,7 +2,7 @@
 
 # This file is part of Brainblast-Toolkit.
 #
-# Copyright (c) 2024 ona-li-toki-e-jan-Epiphany-tawa-mi
+# Copyright (c) 2024-2025 ona-li-toki-e-jan-Epiphany-tawa-mi
 #
 # Brainblast-Toolkit is free software: you can redistribute it and/or modify it
 # under the terms of the GNU General Public License as published by the Free
@@ -24,125 +24,159 @@
 # creativision - apparntly has keyboard.
 # telestrat
 
-# See 'config.sh' for extra build configuration options.
-#
-# Enviroment variable parameters:
-# - TARGETS
-#     Target platforms to build for. Space separated list. Defaults to c64.
-#     Availible targets:
-#     - c64 (Commodore 64, emulator: VICE)
-#     - c128 (Commodore 128, emulator: VICE)
-#     - pet (Commodore PET, emulator: VICE)
-#     - plus4 (Commodore Plus/4, emulator: VICE)
-#     - cx16 (Commander X16, emulator: x16-emulator)
-#     - atari (All 8-bit Atari computers, emulator: atari800)
-#     - atarixl (8-bit Atari computers, XL or newer, except for the 600XL,
-#       emulator: atari800)
-#
-# Available commands:
-# - ./build.sh targets
-#     Lists availabe build targets
-# - ./build.sh OR ./build.sh build
-#     Builds binaries for given TARGETS.
-# - ./build.sh assembly
-#     Builds assembly for given TARGETS for analysis.
-# - ./build.sh run
-#     Runs the REPL binary for given TARGETS in an emulator.
-# - ./build.sh clean
-#     Deletes built files from given TARGETS.
-
 # Error on unset variables.
 set -u
 
+################################################################################
+# Configuration                                                                #
+################################################################################
 
-
-if [ 0 -ne $# ] && [ targets = "$1" ]; then
-    echo c64 c128 pet plus4 cx16 atari atarixl
-    exit 0
-fi
-
-
-
-# Imports build configuration.
 . ./config.sh || exit 1
 
-TARGETS=${TARGETS:-c64}
-
-for TARGET in $TARGETS; do
-    if [ c64 = "$TARGET" ]; then
-        BASICFUCK_MEMORY_SIZE=$C64_CELL_MEMORY_SIZE
-        BINARY_FILE_EXTENSION=$C64_BINARY_FILE_EXTENSION
-        EMULATOR=$C64_EMULATOR
-    elif [ c128 = "$TARGET" ]; then
-        BASICFUCK_MEMORY_SIZE=$C128_CELL_MEMORY_SIZE
-        BINARY_FILE_EXTENSION=$C128_BINARY_FILE_EXTENSION
-        EMULATOR=$C128_EMULATOR
-    elif [ plus4 = "$TARGET" ]; then
-        BASICFUCK_MEMORY_SIZE=$PLUS4_CELL_MEMORY_SIZE
-        BINARY_FILE_EXTENSION=$PLUS4_BINARY_FILE_EXTENSION
-        EMULATOR=$PLUS4_EMULATOR
-    elif [ pet = "$TARGET" ]; then
-        BASICFUCK_MEMORY_SIZE=$PET_CELL_MEMORY_SIZE
-        BINARY_FILE_EXTENSION=$PET_BINARY_FILE_EXTENSION
-        EMULATOR=$PET_EMULATOR
-    elif [ cx16 = "$TARGET" ]; then
-        BASICFUCK_MEMORY_SIZE=$CX16_CELL_MEMORY_SIZE
-        BINARY_FILE_EXTENSION=$CX16_BINARY_FILE_EXTENSION
-        EMULATOR=$CX16_EMULATOR
-    elif [ atari = "$TARGET" ]; then
-        BASICFUCK_MEMORY_SIZE=$ATARI_CELL_MEMORY_SIZE
-        BINARY_FILE_EXTENSION=$ATARI_BINARY_FILE_EXTENSION
-        EMULATOR=$ATARI_EMULATOR
-    elif [ atarixl = "$TARGET" ]; then
-        BASICFUCK_MEMORY_SIZE=$ATARIXL_CELL_MEMORY_SIZE
-        BINARY_FILE_EXTENSION=$ATARIXL_BINARY_FILE_EXTENSION
-        EMULATOR=$ATARIXL_EMULATOR
+# Loads configuration for the given build target.
+# $1 - build target.
+# Sets:
+# - basicfuck_memory_size - the amount of memory, in bytes, to give for
+#   BASICfuck memory.
+# - binary_file_extension - the file extension to use for the compiled program.
+# - emulator - the emulator command to use. Append the program file to this
+#   command.
+load_config_for_target() {
+    if [ c64 = "$1" ]; then
+        basicfuck_memory_size=$C64_CELL_MEMORY_SIZE
+        binary_file_extension=$C64_BINARY_FILE_EXTENSION
+        emulator=$C64_EMULATOR
+    elif [ c128 = "$1" ]; then
+        basicfuck_memory_size=$C128_CELL_MEMORY_SIZE
+        binary_file_extension=$C128_BINARY_FILE_EXTENSION
+        emulator=$C128_EMULATOR
+    elif [ plus4 = "$1" ]; then
+        basicfuck_memory_size=$PLUS4_CELL_MEMORY_SIZE
+        binary_file_extension=$PLUS4_BINARY_FILE_EXTENSION
+        emulator=$PLUS4_EMULATOR
+    elif [ pet = "$1" ]; then
+        basicfuck_memory_size=$PET_CELL_MEMORY_SIZE
+        binary_file_extension=$PET_BINARY_FILE_EXTENSION
+        emulator=$PET_EMULATOR
+    elif [ cx16 = "$1" ]; then
+        basicfuck_memory_size=$CX16_CELL_MEMORY_SIZE
+        binary_file_extension=$CX16_BINARY_FILE_EXTENSION
+        emulator=$CX16_EMULATOR
+    elif [ atari = "$1" ]; then
+        basicfuck_memory_size=$ATARI_CELL_MEMORY_SIZE
+        binary_file_extension=$ATARI_BINARY_FILE_EXTENSION
+        emulator=$ATARI_EMULATOR
+    elif [ atarixl = "$1" ]; then
+        basicfuck_memory_size=$ATARIXL_CELL_MEMORY_SIZE
+        binary_file_extension=$ATARIXL_BINARY_FILE_EXTENSION
+        emulator=$ATARIXL_EMULATOR
     else
-        echo "$0: Error: No build configuration for target '$TARGET'" 1>&2
+        echo "ERROR: No build configuration for target '$1'" 1>&2
+        exit 1
+    fi
+}
+
+################################################################################
+# Command Line Interface                                                       #
+################################################################################
+
+targets='c64 c128 pet plus4 cx16 atari atarixl'
+repl_source=baf-repl.c
+
+if [ 0 -eq $# ]; then
+    echo "Usages:
+  $0 SUBCOMMAND [OPTIONS...]
+
+Build script for BASICfuck.
+
+See 'config.sh' for configuration options.
+
+Subcommands:
+  targets
+    Lists available build targets.
+
+  build <target>
+    Build for the specified target.
+    Set the EXTRA_CFLAGS environment variable to add options to cl65.
+    Set the CFLAGS environment variable to override the default options to cl65.
+
+  run <target>
+    Run the configured emulator for the specfied target.
+"
+    exit
+fi
+
+if [ targets = "$1" ]; then
+    echo 'all (for build subcommand only)'
+    for target in $targets; do
+        echo "$target"
+    done
+    exit
+fi
+
+if [ build = "$1" ]; then
+    if [ 2 -gt $# ]; then
+        echo 'ERROR: build subcommand expects a target as an argument' 1>&2
+        echo "Try '$0' for more information"                           1>&2
         exit 1
     fi
 
-    CC65_DIRECTORY=${CC65DIR:-/usr/share/cc65}
+    if [ all = "$2" ]; then
+        build_targets=$targets
+    else
+        build_targets=$2
+    fi
+
     CC=cl65
-    CFLAGS=${CFLAGS:-'-Osir -Cl -Wc -W,error,-W,struct-param'}
-    # shellcheck disable=SC2089 # We want \" treated literally.
-    ALL_CFLAGS="$CFLAGS -t $TARGET -I $CC65_DIRECTORY/include --asm-include-dir $CC65_DIRECTORY/asminc -L $CC65_DIRECTORY/lib --cfg-path $CC65_DIRECTORY/cfg  -D BASICFUCK_MEMORY_SIZE=${BASICFUCK_MEMORY_SIZE}U -D HISTORY_STACK_SIZE=${HISTORY_STACK_SIZE}U -D TOOLKIT_VERSION=\"$TOOLKIT_VERSION\""
+    CFLAGS=${CFLAGS:-'-Osir -Cl -Wc -W,struct-param'}
+    EXTRA_CFLAGS=${EXTRA_CFLAGS:-}
 
-    SOURCE_DIRECTORY=src
-    SOURCE=$SOURCE_DIRECTORY/baf-repl.c
+    # Automatically format if astyle is installed.
+    set -x
+    if type astyle > /dev/null 2>&1; then
+        astyle -n --style=attach "$repl_source" || exit 1
+    fi
+    set +x
 
-    OUT_DIRECTORY=$TARGET
-    REPL_OUT=$OUT_DIRECTORY/baf-repl.$BINARY_FILE_EXTENSION
+    for target in $build_targets; do
+        echo "INFO: Building for target '$target'..."
 
+        load_config_for_target "$target"
+        # shellcheck disable=SC2089 # We want \" treated literally.
+        ALL_CFLAGS="$CFLAGS $EXTRA_CFLAGS -t $target -D BASICFUCK_MEMORY_SIZE=${basicfuck_memory_size}U -D HISTORY_STACK_SIZE=${HISTORY_STACK_SIZE}U -D TOOLKIT_VERSION=\"$TOOLKIT_VERSION\""
+        out_directory=out/$target
+        repl_out="$out_directory/${repl_source%.c}.${binary_file_extension}"
 
-    if [ 0 -eq $# ] || [ build = "$1" ]; then
-        object=${SOURCE%.c}.o; object=${object#"${SOURCE_DIRECTORY}/"}
         set -x
+        mkdir -p "$out_directory"
         # shellcheck disable=SC2086,SC2090 # We want word splitting.
-        $CC $ALL_CFLAGS -c -o "$object" "$SOURCE"  || exit 1
-        mkdir -p "$OUT_DIRECTORY"                  || exit 1
-        # shellcheck disable=SC2086,SC2090 # We want word splitting.
-        $CC $ALL_CFLAGS -o "$REPL_OUT" "$object"   || exit 1
+        $CC $ALL_CFLAGS -o "$repl_out" "$repl_source" || exit 1
+        set +x
+    done
 
-    elif [ assembly = "$1" ]; then
-        assembly=${SOURCE%.c}.s; assembly=${assembly#"${SOURCE_DIRECTORY}/"}
-        set -x
-        # shellcheck disable=SC2086,SC2090 # We want word splitting.
-        $CC $ALL_CFLAGS -g -S -o "$assembly" "$SOURCE" || exit 1
+    exit
+fi
 
-    elif [ run = "$1" ]; then
-        set -x
-        $EMULATOR "$REPL_OUT" || exit 1
-
-    elif [ clean = "$1" ]; then
-        set -x
-        rm -rf "$OUT_DIRECTORY" ./*.o ./*.s
-
-    else
-        echo "$0: Error: Unknown build command '$1'" 1>&2
+if [ "run" = "$1" ]; then
+    if [ 2 -gt $# ]; then
+        echo 'ERROR: run subcommand expects a target as an argument' 1>&2
+        echo "Try '$0' for more information"                         1>&2
         exit 1
     fi
 
+    echo "INFO: Emulating for target '$2'..."
 
+    load_config_for_target "$2"
+    out_directory=out/$2
+    repl_out="$out_directory/${repl_source%.c}.${binary_file_extension}"
+
+    set -x
+    $emulator "$repl_out" || exit 1
     set +x
-done
+
+    exit
+fi
+
+echo "ERROR: Unknown subcommand '$1'" 1>&2
+echo "Try '$0' for more information"  1>&2
+exit 1

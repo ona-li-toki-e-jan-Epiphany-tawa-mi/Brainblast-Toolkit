@@ -2,7 +2,7 @@
 
 # This file is part of Brainblast-Toolkit.
 #
-# Copyright (c) 2024 ona-li-toki-e-jan-Epiphany-tawa-mi
+# Copyright (c) 2024-2025 ona-li-toki-e-jan-Epiphany-tawa-mi
 #
 # Brainblast-Toolkit is free software: you can redistribute it and/or modify it
 # under the terms of the GNU General Public License as published by the Free
@@ -26,12 +26,12 @@ export HISTORY_STACK_SIZE=1028
 # The number of bytes to allocate for BASICfuck cell memory. Make this 30,000
 # cells maxiumum. If someone wants more they can always change it.
 export C64_CELL_MEMORY_SIZE=30000
-export C128_CELL_MEMORY_SIZE=28000
+export C128_CELL_MEMORY_SIZE=27750
 export PLUS4_CELL_MEMORY_SIZE=30000
-export PET_CELL_MEMORY_SIZE=17500
-export CX16_CELL_MEMORY_SIZE=25000
-export ATARI_CELL_MEMORY_SIZE=25900
-export ATARIXL_CELL_MEMORY_SIZE=28300
+export PET_CELL_MEMORY_SIZE=17000
+export CX16_CELL_MEMORY_SIZE=25250
+export ATARI_CELL_MEMORY_SIZE=25500
+export ATARIXL_CELL_MEMORY_SIZE=27000
 
 # Which file extension to use for generated binaries.
 export C64_BINARY_FILE_EXTENSION=prg
@@ -44,10 +44,10 @@ export ATARIXL_BINARY_FILE_EXTENSION=com
 
 # Emulator commands. The binary to run will be appended to the end of the
 # command.
-export C64_EMULATOR='x64 -silent'
-export C128_EMULATOR='x128 -silent'
-export PLUS4_EMULATOR='xplus4 -silent'
-export PET_EMULATOR='xpet -silent'
+export C64_EMULATOR=x64
+export C128_EMULATOR=x128
+export PLUS4_EMULATOR=xplus4
+export PET_EMULATOR=xpet
 export CX16_EMULATOR='x16emu -rom /usr/share/x16-rom/rom.bin -prg'
-export ATARI_EMULATOR='atari800 > /dev/null -run'
-export ATARIXL_EMULATOR='atari800 -xl > /dev/null -run'
+export ATARI_EMULATOR='atari800 -run'
+export ATARIXL_EMULATOR='atari800 -xl -run'

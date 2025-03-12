@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.0
+
+- Greatly simplified code base (probably a little faster now too.)
+- Clearing edit buffer now shows input prompt.
+- Added license menu.
+
+## 0.1.2
+
 - Relicensed as GPLv3+.
 
 ## 0.1.1
