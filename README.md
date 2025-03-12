@@ -1,4 +1,4 @@
-# Brainblast-Toolkit
+# BASICfuck
 
 A brainfuck/BASICfuck REPL for 6502 machines.
 

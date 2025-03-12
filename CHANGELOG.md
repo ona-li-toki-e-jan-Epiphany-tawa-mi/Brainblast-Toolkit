@@ -5,6 +5,7 @@
 - Greatly simplified code base (probably a little faster now too.)
 - Clearing edit buffer now shows input prompt.
 - Added license menu.
+- Renamed to BASICfuck.
 
 ## 0.1.2
 

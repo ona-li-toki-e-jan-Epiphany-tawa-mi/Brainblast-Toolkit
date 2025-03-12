@@ -1,24 +1,20 @@
 #!/bin/sh
 
-# This file is part of Brainblast-Toolkit.
+# This file is part of BASICfuck.
 #
 # Copyright (c) 2024-2025 ona-li-toki-e-jan-Epiphany-tawa-mi
 #
-# Brainblast-Toolkit is free software: you can redistribute it and/or modify it
-# under the terms of the GNU General Public License as published by the Free
-# Software Foundation, either version 3 of the License, or (at your option) any
-# later version.
+# BASICfuck is free software: you can redistribute it and/or modify it under the
+# terms of the GNU General Public License as published by the Free Software
+# Foundation, either version 3 of the License, or (at your option) any later
+# version.
 #
-# Brainblast-Toolkit is distributed in the hope that it will be useful, but
-# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
-# details.
+# BASICfuck is distributed in the hope that it will be useful, but WITHOUT ANY
+# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+# A PARTICULAR PURPOSE. See the GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License along with
-# Brainblast-Toolkit. If not, see <https://www.gnu.org/licenses/>.
-
-# Metadata.
-export TOOLKIT_VERSION=0.1.2
+# BASICfuck. If not, see <https://www.gnu.org/licenses/>.
 
 # The size, in bytes, of the stack used to recall previous user inputs.
 export HISTORY_STACK_SIZE=1028

@@ -1,21 +1,20 @@
 #!/bin/sh
 
-# This file is part of Brainblast-Toolkit.
+# This file is part of BASICfuck.
 #
 # Copyright (c) 2024-2025 ona-li-toki-e-jan-Epiphany-tawa-mi
 #
-# Brainblast-Toolkit is free software: you can redistribute it and/or modify it
-# under the terms of the GNU General Public License as published by the Free
-# Software Foundation, either version 3 of the License, or (at your option) any
-# later version.
+# BASICfuck is free software: you can redistribute it and/or modify it under the
+# terms of the GNU General Public License as published by the Free Software
+# Foundation, either version 3 of the License, or (at your option) any later
+# version.
 #
-# Brainblast-Toolkit is distributed in the hope that it will be useful, but
-# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
-# details.
+# BASICfuck is distributed in the hope that it will be useful, but WITHOUT ANY
+# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+# A PARTICULAR PURPOSE. See the GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License along with
-# Brainblast-Toolkit. If not, see <https://www.gnu.org/licenses/>.
+# BASICfuck. If not, see <https://www.gnu.org/licenses/>.
 
 # TODO Desired additional targets:
 # apple2
@@ -143,7 +142,7 @@ if [ build = "$1" ]; then
 
         load_config_for_target "$target"
         # shellcheck disable=SC2089 # We want \" treated literally.
-        ALL_CFLAGS="$CFLAGS $EXTRA_CFLAGS -t $target -D BASICFUCK_MEMORY_SIZE=${basicfuck_memory_size}U -D HISTORY_STACK_SIZE=${HISTORY_STACK_SIZE}U -D TOOLKIT_VERSION=\"$TOOLKIT_VERSION\""
+        ALL_CFLAGS="$CFLAGS $EXTRA_CFLAGS -t $target -D BASICFUCK_MEMORY_SIZE=${basicfuck_memory_size}U -D HISTORY_STACK_SIZE=${HISTORY_STACK_SIZE}U"
         out_directory=out/$target
         repl_out="$out_directory/${repl_source%.c}.${binary_file_extension}"
 

@@ -1,29 +1,27 @@
 /*
- * This file is part of Brainblast-Toolkit.
+ * This file is part of BASICfuck.
  *
  * Copyright (c) 2024-2025 ona-li-toki-e-jan-Epiphany-tawa-mi
  *
- * Brainblast-Toolkit is free software: you can redistribute it and/or modify it
- * under the terms of the GNU General Public License as published by the Free
- * Software Foundation, either version 3 of the License, or (at your option) any
- * later version.
+ * BASICfuck is free software: you can redistribute it and/or modify it under
+ * the terms of the GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option) any later
+ * version.
  *
- * Brainblast-Toolkit is distributed in the hope that it will be useful, but
- * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
- * details.
+ * BASICfuck is distributed in the hope that it will be useful, but WITHOUT ANY
+ * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+ * A PARTICULAR PURPOSE. See the GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License along with
- * Brainblast-Toolkit. If not, see <https://www.gnu.org/licenses/>.
+ * BASICfuck. If not, see <https://www.gnu.org/licenses/>.
  */
 
 /*
  * BASICfuck Read-Evaluate-Print Loop.
  *
  * Preprocessor parameters:
- *  - BASICFUCK_MEMORY_SIZE - The number of BASICfuck cells (bytes) to allocate.
- *  - TOOLKIT_VERSION - The version string for Brainblast-Toolkit.
- *  - HISTORY_STACK_SIZE - The size, in bytes, of the history stack.
+ * - BASICFUCK_MEMORY_SIZE - The number of BASICfuck cells (bytes) to allocate.
+ * - HISTORY_STACK_SIZE - The size, in bytes, of the history stack.
  */
 
 #include <assert.h>
@@ -979,13 +977,13 @@ static void licenseMenu(void) {
     puts(
         "Copyright (c) 2024-2025 ona-li-toki-e-jan-Epiphany-tawa-mi\n"
         "\n"
-        "Brainblast-Toolkit is free software: you can redistribute it and/or "
-        "modify it under the terms of the GNU General Public License as "
-        "published by the Free Software Foundation, either version 3 of the "
-        "License, or (at your option) any later version.\n"
+        "BASICfuck is free software: you can redistribute it and/or modify it "
+        "under the terms of the GNU General Public License as published by the "
+        "Free Software Foundation, either version 3 of the License, or (at "
+        "your option) any later version.\n"
         "\n"
-        "Brainblast-Toolkit is distributed in the hope that it will be useful, "
-        "but WITHOUT ANY WARRANTY; without even the implied warranty of "
+        "BASICfuck is distributed in the hope that it will be useful, but "
+        "WITHOUT ANY WARRANTY; without even the implied warranty of "
         "MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU "
         "General Public License for more details.\n"
         "\n"
@@ -996,16 +994,15 @@ static void licenseMenu(void) {
     clrscr();
     puts(
         "You should have received a copy of the GNU General Public License "
-        "along with Brainblast-Toolkit. If not, see "
-        "<https://www.gnu.org/licenses/>.\n"
+        "along with BASICfuck. If not, see <https://www.gnu.org/licenses/>.\n"
         "\n"
         "Source (paltepuk):\n"
-        "Clearnet - https://paltepuk.xyz/cgit/Brainblast-Toolkit.git/about/\n"
-        "I2P - http://oytjumugnwsf4g72vemtamo72vfvgmp4lfsf6wmggcvba3qmcsta.b32.i2p/cgit/Brainblast-Toolkit.git/about/\n"
-        "Tor - http://4blcq4arxhbkc77tfrtmy4pptf55gjbhlj32rbfyskl672v2plsmjcyd.onion/cgit/Brainblast-Toolkit.git/about/\n"
+        "Clearnet - https://paltepuk.xyz/cgit/BASICfuck.git/about/\n"
+        "I2P - http://oytjumugnwsf4g72vemtamo72vfvgmp4lfsf6wmggcvba3qmcsta.b32.i2p/cgit/BASICfuck.git/about/\n"
+        "Tor - http://4blcq4arxhbkc77tfrtmy4pptf55gjbhlj32rbfyskl672v2plsmjcyd.onion/cgit/BASICfuck.git/about/\n"
         "\n"
         "Source (GitHub):\n"
-        "Clearnet - https://github.com/ona-li-toki-e-jan-Epiphany-tawa-mi/Brainblast-Toolkit/\n"
+        "Clearnet - https://github.com/ona-li-toki-e-jan-Epiphany-tawa-mi/BASICfuck/\n"
         "\n"
         "Press ANY KEY to CONTINUE"
     );
@@ -1076,7 +1073,7 @@ int main(void) {
     initializeInstructionOpcodeTable();
 
     clrscr();
-    puts("Brainblast-Toolkit BASICfuck REPL " TOOLKIT_VERSION "\n");
+    puts("BASICfuck REPL 0.2.0\n");
     utoaFputs(0, BASICFUCK_MEMORY_SIZE, 10);
     puts(
         " CELLS FREE\n"
