@@ -46,17 +46,19 @@
 static uint8_t width  = 0;
 static uint8_t height = 0;
 
-// On some machines, cgetc() doesn't block like expected, and instead returns
-// immediately. This version adds in a check to ensure the blocking behavior.
-// TODO: add preprocessor stuff to remove extra code when on machine with the
-// blocking behavior.
+// On the Commander X16, cgetc() doesn't block like expected, and instead
+// returns immediately. This version adds in a check to ensure the blocking
+// behavior.
 static uint8_t wrappedCgetc(void) {
+#ifdef __CX16__
     uint8_t character = 0;
     do {
         character = cgetc();
     } while ('\0' == character);
-
     return character;
+#else // __CX16__
+    return cgetc();
+#endif
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -370,7 +372,7 @@ static void editEditBuffer(void) {
         // Handles INST, inserting characters into the buffer.
         case KEYBOARD_INSERT: {
             if (edit_buffer_input_size >= EDIT_BUFFER_SIZE
-            || edit_buffer_cursor == edit_buffer_input_size) {
+                    || edit_buffer_cursor == edit_buffer_input_size) {
                 break;
             }
 
@@ -926,13 +928,19 @@ static void helpMenu(void) {
         "\n"
         "REPL Controls (Keypress):\n"
         "\n"
-        KEYBOARD_STOP_STRING" - Cancel input and start new line like C-c.\n"
-        KEYBOARD_HOME_STRING" - Move to start of line.\n"
-        KEYBOARD_CLEAR_STRING" - Clear screen and line.\n"
-        KEYBOARD_F1_STRING" - Previous history item.\n"
-        KEYBOARD_F2_STRING" - Next history item.\n"
+        KEYBOARD_STOP_STRING
+        " - Cancel input and start new line like C-c.\n"
+        KEYBOARD_HOME_STRING
+        " - Move to start of line.\n"
+        KEYBOARD_CLEAR_STRING
+        " - Clear screen and line.\n"
+        KEYBOARD_F1_STRING
+        " - Previous history item.\n"
+        KEYBOARD_F2_STRING
+        " - Next history item.\n"
         "\n"
-        KEYBOARD_STOP_STRING" - Abort BASICfuck program.\n"
+        KEYBOARD_STOP_STRING
+        " - Abort BASICfuck program.\n"
         "\n"
         "Press ANY KEY to CONTINUE"
     );
