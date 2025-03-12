@@ -1,5 +1,7 @@
 # Changelog
 
+## 0.1.2
+
 - Relicensed as GPLv3+.
 
 ## 0.1.1

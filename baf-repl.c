@@ -151,269 +151,269 @@ static bool isControlCharacter(const uint8_t character) {
 #endif
 }
 
-// Global variables for passing parameters between functions.
-// The buffer currently being edited.
-static uint8_t* tb_buffer;
-// The location of the user's cursor inside the buffer.
-static uint8_t tb_cursor;
-// How much of the buffer is taken up by the text typed by the user.
-static uint8_t tb_input_size;
-
 // History stack state.
-static uint8_t* tb_history_stack;
-static uint16_t tb_history_stack_size;
-static uint16_t tb_history_stack_index;
+static uint8_t  history_stack[HISTORY_STACK_SIZE] = {0};
+static uint16_t history_stack_index               = 0;
 
 // Increments the history stack index and loops it around if it goes out of
 // bounds.
-// tb_history_stack_index (global) - current index into the history stack.
-// tb_history_stack_size (global) - the size of the history stack.
-static void tb_increment_stack_index() {
-    ++(tb_history_stack_index);
-    if (tb_history_stack_index >= tb_history_stack_size)
-        tb_history_stack_index = 0;
+// history_stack_index (global) - current index into the history stack.
+static void incrementHistoryStackIndex() {
+    ++history_stack_index;
+    if (history_stack_index >= HISTORY_STACK_SIZE)
+        history_stack_index = 0;
 }
 
 // Decrements the history stack index and loops it around if it goes out of
 // bounds.
-// tb_history_stack_index (global) - current index into the history stack.
-// tb_history_stack_size (global) - the size of the history stack.
-static void tb_decrement_stack_index() {
-    if (0 == tb_history_stack_index) {
-        tb_history_stack_index = tb_history_stack_size - 1;
+static void decrementHistoryStackIndex() {
+    if (0 == history_stack_index) {
+        history_stack_index = HISTORY_STACK_SIZE - 1;
     } else {
-        --(tb_history_stack_index);
+        --history_stack_index;
     }
 }
 
-// Saves the given null-terminated text buffer to the history stack for later
-// recollection.
-// tb_current_buffer (global) - the null-terminated buffer to save.
-// tb_history_stack (global) - pointer to the history stack.
-// tb_history_stack_index (global) - current index into the history stack.
-static void tb_save_buffer() {
-    uint8_t character;
+// Edit buffer state.
+// The buffer currently being edited.
+#define EDIT_BUFFER_SIZE 255 // No more than 255.
+static uint8_t edit_buffer[EDIT_BUFFER_SIZE] = {0};
+// The location of the user's cursor inside the buffer.
+static uint8_t edit_buffer_cursor = 0;
+// How much of the buffer is taken up by the text typed by the user.
+static uint8_t edit_buffer_input_size = 0;
+
+// Saves the edit buffer to the history stack for later recollection.
+static void saveEditBuffer() {
+    uint8_t character    = 0;
     uint8_t buffer_index = 0;
 
-    if (NULL == tb_buffer[buffer_index])
+    if (NULL == edit_buffer[buffer_index])
         return;
 
     do {
-        character = tb_buffer[buffer_index];
-        tb_history_stack[tb_history_stack_index] = character;
+        character                          = edit_buffer[buffer_index];
+        history_stack[history_stack_index] = character;
 
-        tb_increment_stack_index();
+        incrementHistoryStackIndex();
         ++buffer_index;
     } while (NULL != character);
 }
 
-// Recalls the previous input if foward_recall is false, else recalls the next
-// input from the history buffer.
-// tb_current_buffer (global) - the null-terminated buffer to write to.
-// tb_buffer_cursor (global) - the user's cursor inside the buffer.
-// tb_input_size (global) - the amount of space used inside the buffer.
-// tb_forward_recall - which direction to move in in the history buffer.
-// tb_history_stack (global) - pointer to the history stack.
-// tb_history_stack_index (global) - current index into the history stack.
-static void tb_recall_buffer(const bool forward_recall) {
+// Recalls, into the edit buffer, the previous input if foward_recall is false,
+// else recalls the next input from the history stack.
+static void recallEditBuffer(const bool forward_recall) {
     uint8_t  character;
-    uint16_t final_history_index = tb_history_stack_index;
+    uint16_t final_history_index = history_stack_index;
 
     // Moves forwards or backwards to the next block in the history stack.
     if (forward_recall) {
-        while (NULL != tb_history_stack[tb_history_stack_index])
-            tb_increment_stack_index();
-        tb_increment_stack_index();
+        while (NULL != history_stack[history_stack_index])
+            incrementHistoryStackIndex();
+        incrementHistoryStackIndex();
 
     } else {
-        tb_decrement_stack_index();
+        decrementHistoryStackIndex();
         do {
-            tb_decrement_stack_index();
-        } while (NULL != tb_history_stack[tb_history_stack_index]);
-        tb_increment_stack_index();
+            decrementHistoryStackIndex();
+        } while (NULL != history_stack[history_stack_index]);
+        incrementHistoryStackIndex();
     }
 
     // If a NULL is found at the next block, that means that it's at the end of
     // the history buffer.
-    if (NULL == tb_history_stack[tb_history_stack_index]) {
-        tb_history_stack_index = final_history_index;
+    if (NULL == history_stack[history_stack_index]) {
+        history_stack_index = final_history_index;
         return;
     }
     // Preservers the index of this block as we will stay here in case of
     // succesive movements through the history.
-    final_history_index = tb_history_stack_index;
+    final_history_index = history_stack_index;
 
     // Navigates visual cursor to the end of the buffer.
-    for (; tb_cursor < tb_input_size; ++tb_cursor)
+    for (; edit_buffer_cursor < edit_buffer_input_size; ++edit_buffer_cursor)
         putchar(KEYBOARD_RIGHT);
     // Clears visual buffer.
-    while (tb_cursor > 0) {
+    while (edit_buffer_cursor > 0) {
         putchar(KEYBOARD_BACKSPACE);
-        --tb_cursor;
+        --edit_buffer_cursor;
     }
 
     // Reads from history buffer into buffer.
     while (true) {
-        character            = tb_history_stack[tb_history_stack_index];
-        tb_buffer[tb_cursor] = character;
+        character                       = history_stack[history_stack_index];
+        edit_buffer[edit_buffer_cursor] = character;
         putchar(character);
 
         if (NULL == character)
             break;
 
-        tb_increment_stack_index();
-        ++tb_cursor;
+        incrementHistoryStackIndex();
+        ++edit_buffer_cursor;
     }
-    tb_input_size = tb_cursor;
+    edit_buffer_input_size = edit_buffer_cursor;
 
     // Restores history stack index to the start of the current block so that
     // moving forwards and backwords works properly.
-    tb_history_stack_index = final_history_index;
+    history_stack_index = final_history_index;
 }
 
 // Creates an editable text buffer, starting from the current position on the
-// screen, and stores what the user typed into the given buffer with a
+// screen, and stores what the user typed into the edit buffer with a
 // null-terminator.
 // The cursor on the screen will be moved to the line after the filled portion
 // of the text buffer once done.
-// buffer - the buffer to store the typed characters into.
-// buffer_max_index - the maxiumum addressable index of the buffer.
-// tb_history_stack (global) - the stack to store previous user inputs in.
-// tb_history_stack_size (global) - the size of the history stack.
-// tb_history_stack_index (global) - a pointer to the current index into the
-// stack history.
-static void tb_edit_buffer(uint8_t *const buffer, uint8_t buffer_max_index) {
-    uint8_t new_cursor;
-    uint8_t key;
-
-    // Ensures the last byte is reserved for a null-terminator.
-    buffer_max_index -= 1;
-
-    // Loads parameters into global variables for this and other functions.
-    tb_buffer     = buffer;
-    tb_cursor     = 0;
-    tb_input_size = 0;
+static void editEditBuffer() {
+    uint8_t new_cursor = 0;
+    uint8_t key        = 0;
 
     while (true) {
         key = blinkingCgetc();
 
         switch (key) {
         // Finalizes the buffer and exits from this function.
-        case KEYBOARD_ENTER:
-            tb_buffer[tb_input_size] = NULL;               // write out null-terminator.
-            for (; tb_cursor < tb_input_size; ++tb_cursor) // navigate to then end of buffer if neccesary.
+        case KEYBOARD_ENTER: {
+            // Writes out null-terminator.
+            edit_buffer[edit_buffer_input_size] = NULL;
+            // Navigates to then end of buffer if neccesary.
+            while (edit_buffer_cursor < edit_buffer_input_size) {
                 putchar(KEYBOARD_RIGHT);
+                ++edit_buffer_cursor;
+            }
             putchar('\n');
-
             goto lquit_editing_buffer;
+        }
 
         // "Clears" the input buffer and exits from this function.
-        case KEYBOARD_STOP:
-            tb_buffer[0] = NULL;                  // write null terminator to start of buffer, "clearing" it.
+        case KEYBOARD_STOP: {
+            // Writes null terminator to start of buffer, "clearing" it.
+            edit_buffer[0] = NULL;
             putchar('\n');
-
             goto lquit_editing_buffer;
+        }
 
         // Clears the screen and input buffer.
-        case KEYBOARD_CLEAR:
-            tb_cursor     = 0;
-            tb_input_size = 0;
+        case KEYBOARD_CLEAR: {
+            edit_buffer_cursor     = 0;
+            edit_buffer_input_size = 0;
             clrscr();
             break;
+        }
 
         // Deletes characters from the buffer.
-        case KEYBOARD_BACKSPACE:
-            if (tb_cursor == 0)
-                break;
+        case KEYBOARD_BACKSPACE: {
+            if (edit_buffer_cursor == 0) break;
 
-            putchar(KEYBOARD_BACKSPACE);    // display backspace.
+            putchar(KEYBOARD_BACKSPACE);
             // Shifts characters in buffer to the left, overwiting the deleted
             // character.
-            memmove(tb_buffer+tb_cursor - 1, tb_buffer+tb_cursor, tb_input_size - tb_cursor);
-            --tb_input_size;
-            --tb_cursor;
+            memmove(
+                edit_buffer + edit_buffer_cursor - 1,
+                edit_buffer + edit_buffer_cursor,
+                edit_buffer_input_size - edit_buffer_cursor
+            );
+            --edit_buffer_input_size;
+            --edit_buffer_cursor;
 
             break;
+        }
 
         // Handles arrow keys, moving through the buffer.
-        case KEYBOARD_LEFT:
-            if (tb_cursor > 0) {
-                --tb_cursor;
+        case KEYBOARD_LEFT: {
+            if (edit_buffer_cursor > 0) {
+                --edit_buffer_cursor;
                 putchar(KEYBOARD_LEFT);
             }
             break;
+        }
 
-        case KEYBOARD_RIGHT:
-            if (tb_cursor < tb_input_size) {
-                ++tb_cursor;
+        case KEYBOARD_RIGHT: {
+            if (edit_buffer_cursor < edit_buffer_input_size) {
+                ++edit_buffer_cursor;
                 putchar(KEYBOARD_RIGHT);
             }
             break;
+        }
 
-        case KEYBOARD_UP:
+        case KEYBOARD_UP: {
             // Navigates to the next line up, or to the start of the buffer, if
             // there is no line there.
-            new_cursor = tb_cursor > width ? tb_cursor - width : 0;
-            for (; tb_cursor > new_cursor; --tb_cursor)
+            new_cursor = edit_buffer_cursor > width
+                         ? edit_buffer_cursor - width : 0;
+            for (; edit_buffer_cursor > new_cursor; --edit_buffer_cursor) {
                 putchar(KEYBOARD_LEFT);
-
+            }
             break;
+        }
 
-        case KEYBOARD_DOWN:
+        case KEYBOARD_DOWN: {
             // Navigates to the next line down, or to the end of the filled
             // buffer, if there is no line there.
-            new_cursor = (tb_input_size - tb_cursor) > width ? tb_cursor + width : tb_input_size;
-            for (; tb_cursor < new_cursor; ++tb_cursor)
+            new_cursor = edit_buffer_input_size - edit_buffer_cursor > width
+                         ? edit_buffer_cursor + width : edit_buffer_input_size;
+            for (; edit_buffer_cursor < new_cursor; ++edit_buffer_cursor) {
                 putchar(KEYBOARD_RIGHT);
-
+            }
             break;
+        }
 
         // Handles HOME, moving to the start of the buffer.
-        case KEYBOARD_HOME:
-            for (; tb_cursor > 0; --tb_cursor)
+        case KEYBOARD_HOME: {
+            for (; edit_buffer_cursor > 0; --edit_buffer_cursor) {
                 putchar(KEYBOARD_LEFT);
+            }
             break;
+        }
 
         // Handles INST, inserting characters into the buffer.
-        case KEYBOARD_INSERT:
-            if (tb_input_size > buffer_max_index || tb_cursor == tb_input_size)
+        case KEYBOARD_INSERT: {
+            if (edit_buffer_input_size >= EDIT_BUFFER_SIZE
+            || edit_buffer_cursor == edit_buffer_input_size) {
                 break;
+            }
 
-            putchar(KEYBOARD_INSERT);       // display insertion.
+            putchar(KEYBOARD_INSERT);
             // Shifts characters in buffer to the right, making space for the
             // new one.
-            memmove(tb_buffer+tb_cursor + 1, tb_buffer+tb_cursor, tb_input_size - tb_cursor);
-            tb_input_size++;
-            tb_buffer[tb_cursor] = ' ';
+            memmove(
+                edit_buffer + edit_buffer_cursor + 1,
+                edit_buffer + edit_buffer_cursor,
+                edit_buffer_input_size - edit_buffer_cursor
+            );
+            edit_buffer_input_size++;
+            edit_buffer[edit_buffer_cursor] = ' ';
 
             break;
+        }
 
         // Handles function keys, navigating through the history buffer.
-        case KEYBOARD_F1:
-            tb_recall_buffer(false);
+        case KEYBOARD_F1: {
+            recallEditBuffer(false);
             break;
+        }
 
-        case KEYBOARD_F2:
-            tb_recall_buffer(true);
+        case KEYBOARD_F2: {
+            recallEditBuffer(true);
             break;
+        }
 
         // Handles typing characters.
-        default:
-            if (isControlCharacter(key))      // filter out unhandled control characters.
-                break;
-            if (tb_cursor > buffer_max_index)
-                break;
+        default: {
+            if (isControlCharacter(key))                break;
+            if (edit_buffer_cursor >= EDIT_BUFFER_SIZE) break;
 
-            if (tb_cursor == tb_input_size)      // increase buffer size if adding characters to the end.
-                ++tb_input_size;
-            tb_buffer[tb_cursor] = key;
-            ++tb_cursor;
+            // Increases buffer size if adding characters to the end.
+            if (edit_buffer_cursor == edit_buffer_input_size)
+                ++edit_buffer_input_size;
+            edit_buffer[edit_buffer_cursor] = key;
+            ++edit_buffer_cursor;
             putchar(key);
+        }
         }
     }
 lquit_editing_buffer:
 
-    tb_save_buffer();
+    saveEditBuffer();
     return;
 }
 
@@ -1025,25 +1025,19 @@ static void displayBytecode() {
         putchar(' ');
         utoaFputs(2, program_memory[i], 16);
 
-        if (i >= PROGRAM_MEMORY_SIZE - 1)
-            break;
+        if (i >= PROGRAM_MEMORY_SIZE - 1) break;
         ++i;
     }
 
     putchar('\n');
 }
 
-#define INPUT_BUFFER_SIZE 256
-
 int main(void) {
     static baf_cell_t     BASICfuck_memory[BASICFUCK_MEMORY_SIZE] = {0};
     static BAFCompiler    compiler                                = {0};
     static BAFInterpreter interpreter                             = {0};
 
-    static uint8_t input_buffer[INPUT_BUFFER_SIZE]   = {0};
-    static uint8_t history_stack[HISTORY_STACK_SIZE] = {0};
-
-    compiler.read_buffer       = input_buffer;
+    compiler.read_buffer       = edit_buffer;
     compiler.write_buffer      = program_memory;
     compiler.write_buffer_size = PROGRAM_MEMORY_SIZE;
 
@@ -1053,11 +1047,6 @@ int main(void) {
     interpreter.basicfuck_cell_end_pointer   = BASICfuck_memory +
         BASICFUCK_MEMORY_SIZE;
     interpreter.computer_memory_pointer = 0;
-
-    // Initalizes the history stack.
-    tb_history_stack       = history_stack;
-    tb_history_stack_size  = HISTORY_STACK_SIZE;
-    tb_history_stack_index = 0;
 
     // Initializes global screen size variables in screen.h.
     screensize(&width, &height);
@@ -1077,38 +1066,46 @@ int main(void) {
     while (true) {
         // Read.
         fputs("YOUR WILL? ", stdout);
-        tb_edit_buffer(input_buffer, INPUT_BUFFER_SIZE - 1);
+        editEditBuffer();
 
-        switch (input_buffer[0]) {
-        case '\0':
+        switch (edit_buffer[0]) {
+        case '\0': {
             // empty input.
             continue;
-
-        case '!':
+        }
+        case '!': {
             puts("SO BE IT.");
             goto lexit_repl;
-
-        case '?':
+        }
+        case '?': {
             helpMenu();
             continue;
-
-        case '#':
+        }
+        case '#': {
             displayBytecode();
             continue;
+        }
+        default: {
+            break;
+        }
         }
 
         // Evaluate.
         switch (baf_compile(&compiler)) {
-        case BAF_COMPILE_OUT_OF_MEMORY:
+        case BAF_COMPILE_OUT_OF_MEMORY: {
             puts("?OUT OF MEMORY");
             continue;
-        case BAF_COMPILE_UNTERMINATED_LOOP:
+        }
+        case BAF_COMPILE_UNTERMINATED_LOOP: {
             puts("?UNTERMINATED LOOP");
             continue;
-        case BAF_COMPILE_SUCCESS:
+        }
+        case BAF_COMPILE_SUCCESS: {
             break;
-        default:
+        }
+        default: {
             assert(0 && "unreachable");
+        }
         }
 
         baf_interpret(&interpreter);
