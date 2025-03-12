@@ -142,15 +142,15 @@ static void s_utoa_fputs(const size_t digit_count, const uint16_t value, const u
     static uint8_t string_buffer[SCREEN_BUFFER_SIZE];
     size_t         leading_zeros = 0;
 
-    (void)utoa(value, string_buffer, radix);
+    utoa(value, string_buffer, radix);
 
     if (0 != digit_count) {
         leading_zeros = digit_count - strlen(string_buffer);
         for (; leading_zeros > 0; --leading_zeros)
-            (void)fputs("0", stdout);
+            fputs("0", stdout);
     }
 
-    (void)fputs(string_buffer, stdout);
+    fputs(string_buffer, stdout);
 };
 
 // Returns whether the given character is a screen control character.
@@ -267,10 +267,10 @@ static void tb_recall_buffer(const bool forward_recall) {
 
     // Navigates visual cursor to the end of the buffer.
     for (; tb_cursor < tb_input_size; ++tb_cursor)
-        (void)putchar(KEYBOARD_RIGHT);
+        putchar(KEYBOARD_RIGHT);
     // Clears visual buffer.
     while (tb_cursor > 0) {
-        (void)putchar(KEYBOARD_BACKSPACE);
+        putchar(KEYBOARD_BACKSPACE);
         --tb_cursor;
     }
 
@@ -278,7 +278,7 @@ static void tb_recall_buffer(const bool forward_recall) {
     while (true) {
         character            = tb_history_stack[tb_history_stack_index];
         tb_buffer[tb_cursor] = character;
-        (void)putchar(character);
+        putchar(character);
 
         if (NULL == character)
             break;
@@ -324,15 +324,15 @@ static void tb_edit_buffer(uint8_t *const buffer, uint8_t buffer_max_index) {
         case KEYBOARD_ENTER:
             tb_buffer[tb_input_size] = NULL;               // write out null-terminator.
             for (; tb_cursor < tb_input_size; ++tb_cursor) // navigate to then end of buffer if neccesary.
-                (void)putchar(KEYBOARD_RIGHT);
-            (void)putchar('\n');
+                putchar(KEYBOARD_RIGHT);
+            putchar('\n');
 
             goto lquit_editing_buffer;
 
         // "Clears" the input buffer and exits from this function.
         case KEYBOARD_STOP:
             tb_buffer[0] = NULL;                  // write null terminator to start of buffer, "clearing" it.
-            (void)putchar('\n');
+            putchar('\n');
 
             goto lquit_editing_buffer;
 
@@ -348,10 +348,10 @@ static void tb_edit_buffer(uint8_t *const buffer, uint8_t buffer_max_index) {
             if (tb_cursor == 0)
                 break;
 
-            (void)putchar(KEYBOARD_BACKSPACE);    // display backspace.
+            putchar(KEYBOARD_BACKSPACE);    // display backspace.
             // Shifts characters in buffer to the left, overwiting the deleted
             // character.
-            (void)memmove(tb_buffer+tb_cursor - 1, tb_buffer+tb_cursor, tb_input_size - tb_cursor);
+            memmove(tb_buffer+tb_cursor - 1, tb_buffer+tb_cursor, tb_input_size - tb_cursor);
             --tb_input_size;
             --tb_cursor;
 
@@ -361,14 +361,14 @@ static void tb_edit_buffer(uint8_t *const buffer, uint8_t buffer_max_index) {
         case KEYBOARD_LEFT:
             if (tb_cursor > 0) {
                 --tb_cursor;
-                (void)putchar(KEYBOARD_LEFT);
+                putchar(KEYBOARD_LEFT);
             }
             break;
 
         case KEYBOARD_RIGHT:
             if (tb_cursor < tb_input_size) {
                 ++tb_cursor;
-                (void)putchar(KEYBOARD_RIGHT);
+                putchar(KEYBOARD_RIGHT);
             }
             break;
 
@@ -377,7 +377,7 @@ static void tb_edit_buffer(uint8_t *const buffer, uint8_t buffer_max_index) {
             // there is no line there.
             new_cursor = tb_cursor > s_width ? tb_cursor - s_width : 0;
             for (; tb_cursor > new_cursor; --tb_cursor)
-                (void)putchar(KEYBOARD_LEFT);
+                putchar(KEYBOARD_LEFT);
 
             break;
 
@@ -386,14 +386,14 @@ static void tb_edit_buffer(uint8_t *const buffer, uint8_t buffer_max_index) {
             // buffer, if there is no line there.
             new_cursor = (tb_input_size - tb_cursor) > s_width ? tb_cursor + s_width : tb_input_size;
             for (; tb_cursor < new_cursor; ++tb_cursor)
-                (void)putchar(KEYBOARD_RIGHT);
+                putchar(KEYBOARD_RIGHT);
 
             break;
 
         // Handles HOME, moving to the start of the buffer.
         case KEYBOARD_HOME:
             for (; tb_cursor > 0; --tb_cursor)
-                (void)putchar(KEYBOARD_LEFT);
+                putchar(KEYBOARD_LEFT);
             break;
 
         // Handles INST, inserting characters into the buffer.
@@ -401,10 +401,10 @@ static void tb_edit_buffer(uint8_t *const buffer, uint8_t buffer_max_index) {
             if (tb_input_size > buffer_max_index || tb_cursor == tb_input_size)
                 break;
 
-            (void)putchar(KEYBOARD_INSERT);       // display insertion.
+            putchar(KEYBOARD_INSERT);       // display insertion.
             // Shifts characters in buffer to the right, making space for the
             // new one.
-            (void)memmove(tb_buffer+tb_cursor + 1, tb_buffer+tb_cursor, tb_input_size - tb_cursor);
+            memmove(tb_buffer+tb_cursor + 1, tb_buffer+tb_cursor, tb_input_size - tb_cursor);
             tb_input_size++;
             tb_buffer[tb_cursor] = ' ';
 
@@ -430,7 +430,7 @@ static void tb_edit_buffer(uint8_t *const buffer, uint8_t buffer_max_index) {
                 ++tb_input_size;
             tb_buffer[tb_cursor] = key;
             ++tb_cursor;
-            (void)putchar(key);
+            putchar(key);
         }
     }
 lquit_editing_buffer:
@@ -859,7 +859,7 @@ lopcode_bfmem_right:
         goto lfinish_interpreter_cycle;
 
 lopcode_print:
-        (void)putchar(*baf_interpreter_bfmem_pointer);
+        putchar(*baf_interpreter_bfmem_pointer);
         goto lfinish_interpreter_cycle;
 
 lopcode_input:
@@ -938,7 +938,7 @@ lfinish_interpreter_cycle:
 
 static void help_menu() {
     clrscr();
-    (void)puts(
+    puts(
         "REPL Commands (must be at start of line):\n"
         "\n"
         "! - Exits REPL.\n"
@@ -957,10 +957,10 @@ static void help_menu() {
         "\n"
         "Press ANY KEY to CONTINUE"
     );
-    (void)s_wrapped_cgetc();
+    s_wrapped_cgetc();
 
     clrscr();
-    (void)puts(
+    puts(
         "BASICfuck Instructions (Part 1):\n"
         "\n"
         "+ - Increment cell.\n"
@@ -974,10 +974,10 @@ static void help_menu() {
         "\n"
         "Press ANY KEY to CONTINUE"
     );
-    (void)s_wrapped_cgetc();
+    s_wrapped_cgetc();
 
     clrscr();
-    (void)puts(
+    puts(
         "BASICfuck Instructions (Part 2):\n"
         "\n"
         ") - Move to next location in computer memory.\n"
@@ -991,7 +991,7 @@ static void help_menu() {
         "\n"
         "Press ANY KEY to CONTINUE"
     );
-    (void)s_wrapped_cgetc();
+    s_wrapped_cgetc();
 
     clrscr();
 }
@@ -1017,12 +1017,12 @@ static void display_bytecode() {
                 sleep(1);
 
             // Prints addresses.
-            (void)fputs("\n$", stdout);
+            fputs("\n$", stdout);
             s_utoa_fputs(4, (uint16_t)program_memory + i, 16);
-            (void)putchar(':');
+            putchar(':');
         }
         // Prints values.
-        (void)putchar(' ');
+        putchar(' ');
         s_utoa_fputs(2, program_memory[i], 16);
 
         if (i >= PROGRAM_MEMORY_SIZE - 1)
@@ -1030,7 +1030,7 @@ static void display_bytecode() {
         ++i;
     }
 
-    (void)putchar('\n');
+    putchar('\n');
 }
 
 #define INPUT_BUFFER_SIZE 256
@@ -1065,16 +1065,18 @@ int main(void) {
 
 
     clrscr();
-    (void)puts("Brainblast-Toolkit BASICfuck REPL " TOOLKIT_VERSION "\n");
+    puts("Brainblast-Toolkit BASICfuck REPL " TOOLKIT_VERSION "\n");
     s_utoa_fputs(0, BASICFUCK_MEMORY_SIZE, 10);
-    (void)puts(" CELLS FREE\n"
-               "\n"
-               "Enter '?' for HELP\n"
-               "Enter '!' to EXIT\n");
+    puts(
+        " CELLS FREE\n"
+        "\n"
+        "Enter '?' for HELP\n"
+        "Enter '!' to EXIT\n"
+    );
 
     while (true) {
         // Read.
-        (void)fputs("YOUR WILL? ", stdout);
+        fputs("YOUR WILL? ", stdout);
         tb_edit_buffer(input_buffer, INPUT_BUFFER_SIZE - 1);
 
         switch (input_buffer[0]) {
@@ -1083,7 +1085,7 @@ int main(void) {
             continue;
 
         case '!':
-            (void)puts("SO BE IT.");
+            puts("SO BE IT.");
             goto lexit_repl;
 
         case '?':
@@ -1098,10 +1100,10 @@ int main(void) {
         // Evaluate.
         switch (baf_compile(&compiler)) {
         case BAF_COMPILE_OUT_OF_MEMORY:
-            (void)puts("?OUT OF MEMORY");
+            puts("?OUT OF MEMORY");
             continue;
         case BAF_COMPILE_UNTERMINATED_LOOP:
-            (void)puts("?UNTERMINATED LOOP");
+            puts("?UNTERMINATED LOOP");
             continue;
         case BAF_COMPILE_SUCCESS:
             break;
@@ -1113,16 +1115,16 @@ int main(void) {
 
         // Print.
         s_utoa_fputs(3, *interpreter.basicfuck_cell_pointer, 10);
-        (void)fputs(" (Cell ", stdout);
+        fputs(" (Cell ", stdout);
         s_utoa_fputs(
             5,
             (uint16_t)(interpreter.basicfuck_cell_pointer
                        - interpreter.basicfuck_cell_start_pointer)
             , 10
         );
-        (void)fputs(", Memory $", stdout);
+        fputs(", Memory $", stdout);
         s_utoa_fputs(4, (uint16_t)interpreter.computer_memory_pointer, 16);
-        (void)puts(")");
+        puts(")");
     }
 lexit_repl:
 
