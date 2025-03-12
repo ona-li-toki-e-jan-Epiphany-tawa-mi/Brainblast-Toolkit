@@ -11,7 +11,7 @@ This rewrite includes the following benefits:
 - WAYYYYY FASTER!
 - Bytecode viewer (mainly just for debugging this, but it looks cool.)
 - WAYYYYY FASTER! (x2)
-- Support for a few 6502 machines, not just the Commodore 64 (see `build.sh` for supported systems.)
+- Support for a few 6502 machines, not just the Commodore 64 (run `./build.sh targets` for supported systems.)
 
 ## How to Build
 
