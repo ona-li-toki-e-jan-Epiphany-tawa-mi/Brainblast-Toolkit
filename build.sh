@@ -128,7 +128,7 @@ if [ build = "$1" ]; then
     fi
 
     CC=cl65
-    CFLAGS=${CFLAGS:-'-Osir -Cl -Wc -W,error,-W,struct-param'}
+    CFLAGS=${CFLAGS:-'-Osir -Cl -Wc -W,struct-param'}
     EXTRA_CFLAGS=${EXTRA_CFLAGS:-}
 
     # Automatically format if astyle is installed.
