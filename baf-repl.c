@@ -54,7 +54,7 @@
 #  define KEYBOARD_STOP_STRING "STOP"
 #  define KEYBOARD_HOME        CH_HOME
 #  define KEYBOARD_HOME_STRING "HOME"
-   // Not defined in cbm.h, but the same for all CBM computers.
+// Not defined in cbm.h, but the same for all CBM computers.
 #  define KEYBOARD_CLEAR        0x93
 #  define KEYBOARD_CLEAR_STRING "CLR"
 #  if defined( __C16__) || defined( __C64__) || defined(__C128__) || defined(__VIC20__) || defined(__CBM510__) || defined(__CBM610__) || defined(__CX16__)
@@ -63,10 +63,8 @@
 #    define KEYBOARD_F2        CH_F2
 #    define KEYBOARD_F2_STRING "F2"
 #  elif defined(__PET__) // __C16__ || __C64__ || __C128__ || __VIC20__ || __CBM510__ || __CBM610__ || __CX16__
-     // Left arrow character key,
 #    define KEYBOARD_F1        0x5F
 #    define KEYBOARD_F1_STRING "\x5F (left arrow character)"
-     // Up arrow character key.
 #    define KEYBOARD_F2        0x5E
 #    define KEYBOARD_F2_STRING "\x5E (up arrow character)"
 #  else // __PET__
@@ -162,10 +160,10 @@ static bool s_is_control_character(const uint8_t character) {
     return (character & 0x7F) < 0x20;
 #elif defined(__ATARI__)
     // ATASCII character set.
-    return (character >= 0x1B && character <= 0x1F)
-        || (character >= 0x7D && character <= 0x7F)
-        || (character >= 0x8B && character <= 0x8F)
-        || character >= 0xFD;
+    return (character >= 0x1B && character <= 0x1F) ||
+           (character >= 0x7D && character <= 0x7F) ||
+           (character >= 0x8B && character <= 0x8F) ||
+           character >= 0xFD;
 #else
 #  error build target not supported
 #endif
@@ -435,7 +433,7 @@ static void tb_edit_buffer(uint8_t *const buffer, uint8_t buffer_max_index) {
             (void)putchar(key);
         }
     }
- lquit_editing_buffer:
+lquit_editing_buffer:
 
     tb_save_buffer();
     return;
@@ -511,20 +509,20 @@ typedef struct {
 // A table mapping from opcodes to their size (opcode + arguments) in bytes.
 // Index value must be valid opcode.
 static const uint8_t baf_opcode_size_table[] = {
-    1,                                            // BAF_OPCODE_HALT.
-    2,                                            // BAF_OPCODE_INCREMENT.
-    2,                                            // BAF_OPCODE_DECREMENT.
-    2,                                            // BAF_OPCODE_BFMEM_LEFT.
-    2,                                            // BAF_OPCODE_BFMEM_RIGHT.
-    1,                                            // BAF_OPCODE_PRINT.
-    1,                                            // BAF_OPCODE_INPUT.
-    3,                                            // BAF_OPCODE_JEQ.
-    3,                                            // BAF_OPCODE_JNE.
-    1,                                            // BAF_OPCODE_CMEM_READ.
-    1,                                            // BAF_OPCODE_CMEM_WRITE.
-    2,                                            // BAF_OPCODE_CMEM_LEFT.
-    2,                                            // BAF_OPCODE_CMEM_RIGHT.
-    1                                             // BAF_OPCODE_EXECUTE.
+    1, // BAF_OPCODE_HALT.
+    2, // BAF_OPCODE_INCREMENT.
+    2, // BAF_OPCODE_DECREMENT.
+    2, // BAF_OPCODE_BFMEM_LEFT.
+    2, // BAF_OPCODE_BFMEM_RIGHT.
+    1, // BAF_OPCODE_PRINT.
+    1, // BAF_OPCODE_INPUT.
+    3, // BAF_OPCODE_JEQ.
+    3, // BAF_OPCODE_JNE.
+    1, // BAF_OPCODE_CMEM_READ.
+    1, // BAF_OPCODE_CMEM_WRITE.
+    2, // BAF_OPCODE_CMEM_LEFT.
+    2, // BAF_OPCODE_CMEM_RIGHT.
+    1  // BAF_OPCODE_EXECUTE.
 };
 
 // A table mapping from instruction characters to their corresponding opcodes.
@@ -606,14 +604,13 @@ static bool baf_compile_first_pass() {
 
         goto *jump_table[opcode];
 
-
         // End of program.
-    lfinish_bytecode_compilation:
+lfinish_bytecode_compilation:
         *baf_compiler_write_pointer = BAF_OPCODE_HALT;
         break;
 
         // Takes no arguments.
-    lcompile_instruction_no_arugments:
+lcompile_instruction_no_arugments:
         if (baf_compiler_write_pointer >= baf_compiler_write_end_pointer)
             return false;
 
@@ -624,7 +621,7 @@ static bool baf_compile_first_pass() {
 
         // Takes a 16-bit address relative to program memory as a parameter,
         // which will be handled by the second pass.
-    lcompile_jump_instruction:
+lcompile_jump_instruction:
         if (baf_compiler_write_pointer + 2 >= baf_compiler_write_end_pointer)
             return false;
 
@@ -636,7 +633,7 @@ static bool baf_compile_first_pass() {
         continue;
 
         // Takes an 8-bit count of how many times to preform the operation.
-    lcompile_counted_instruction:
+lcompile_counted_instruction:
         instruction_count = 0;
 
         // Count number of consecutive instructions.
@@ -667,18 +664,14 @@ static bool baf_compile_first_pass() {
         continue;
     }
 
-
     return true;
 }
 
-/**
- * Performs the second pass of BASICfuck compilation, calculating the addresses
- * for jump instructions.
- *
- * @param baf_compiler_write_pointer (global) - set to the start of the write
- *        buffer. Gets clobbered.
- * @return true if succeeded, false if there is an unterminated loop.
- */
+// Performs the second pass of BASICfuck compilation, calculating the addresses
+// for jump instructions.
+// baf_compiler_write_pointer (global) - set to the start of the write buffer.
+// Gets clobbered.
+// Returns true if succeeded, false if there is an unterminated loop.
 static bool baf_compile_second_pass() {
     baf_opcode_t* write_start_pointer = baf_compiler_write_pointer;
     baf_opcode_t  opcode = 0;
@@ -686,7 +679,6 @@ static bool baf_compile_second_pass() {
 
     baf_opcode_t* seek_pointer  = NULL;
     baf_opcode_t  seeked_opcode = 0;
-
 
     while (BAF_OPCODE_HALT != (opcode = *baf_compiler_write_pointer)) {
         switch (opcode) {
@@ -785,7 +777,7 @@ static void baf_execute() {
     __asm__ volatile ("lda     %v",   baf_interpreter_register_a);
     __asm__ volatile ("ldx     %v",   baf_interpreter_register_x);
     __asm__ volatile ("ldy     %v",   baf_interpreter_register_y);
- ljump_instruction:
+ljump_instruction:
     __asm__ volatile ("jsr     %w",   NULL);
     // Retrieves resuting values.
     __asm__ volatile ("sta     %v",   baf_interpreter_register_a);
@@ -806,20 +798,20 @@ static void baf_interpret(BAFInterpreter *const interpreter) {
     uint8_t      argument = 0;
 
     static const void *const jump_table[] = {
-        &&lopcode_halt,                           // BAF_OPCODE_HALT.
-        &&lopcode_increment,                      // BAF_OPCODE_INCREMENT.
-        &&lopcode_decrement,                      // BAF_OPCODE_DECREMENT.
-        &&lopcode_bfmem_left,                     // BAF_OPCODE_BFMEM_LEFT.
-        &&lopcode_bfmem_right,                    // BAF_OPCODE_BFMEM_RIGHT.
-        &&lopcode_print,                          // BAF_OPCODE_PRINT.
-        &&lopcode_input,                          // BAF_OPCODE_INPUT.
-        &&lopcode_jeq,                            // BAF_OPCODE_JEQ.
-        &&lopcode_jne,                            // BAF_OPCODE_JNE.
-        &&lopcode_cmem_read,                      // BAF_OPCODE_CMEM_READ.
-        &&lopcode_cmem_write,                     // BAF_OPCODE_CMEM_WRITE.
-        &&lopcode_cmem_left,                      // BAF_OPCODE_CMEM_LEFT.
-        &&lopcode_cmem_right,                     // BAF_OPCODE_CMEM_RIGHT.
-        &&lopcode_execute                         // BAF_OPCODE_EXECUTE.
+        &&lopcode_halt,        // BAF_OPCODE_HALT.
+        &&lopcode_increment,   // BAF_OPCODE_INCREMENT.
+        &&lopcode_decrement,   // BAF_OPCODE_DECREMENT.
+        &&lopcode_bfmem_left,  // BAF_OPCODE_BFMEM_LEFT.
+        &&lopcode_bfmem_right, // BAF_OPCODE_BFMEM_RIGHT.
+        &&lopcode_print,       // BAF_OPCODE_PRINT.
+        &&lopcode_input,       // BAF_OPCODE_INPUT.
+        &&lopcode_jeq,         // BAF_OPCODE_JEQ.
+        &&lopcode_jne,         // BAF_OPCODE_JNE.
+        &&lopcode_cmem_read,   // BAF_OPCODE_CMEM_READ.
+        &&lopcode_cmem_write,  // BAF_OPCODE_CMEM_WRITE.
+        &&lopcode_cmem_left,   // BAF_OPCODE_CMEM_LEFT.
+        &&lopcode_cmem_right,  // BAF_OPCODE_CMEM_RIGHT.
+        &&lopcode_execute      // BAF_OPCODE_EXECUTE.
     };
 
     // Loads interpeter settings into globals for faster access.
@@ -842,18 +834,18 @@ static void baf_interpret(BAFInterpreter *const interpreter) {
         assert(opcode < sizeof(jump_table)/sizeof(jump_table[0]) && "Unknown opcode");
         goto *jump_table[opcode];
 
-    lopcode_halt:
+lopcode_halt:
         break;
 
-    lopcode_increment:
+lopcode_increment:
         *baf_interpreter_bfmem_pointer += argument;
         goto lfinish_interpreter_cycle;
 
-    lopcode_decrement:
+lopcode_decrement:
         *baf_interpreter_bfmem_pointer -= argument;
         goto lfinish_interpreter_cycle;
 
-    lopcode_bfmem_left:
+lopcode_bfmem_left:
         if (baf_interpreter_bfmem_pointer > baf_interpreter_bfmem_start_pointer + argument) {
             baf_interpreter_bfmem_pointer -= argument;
         } else {
@@ -861,16 +853,16 @@ static void baf_interpret(BAFInterpreter *const interpreter) {
         }
         goto lfinish_interpreter_cycle;
 
-    lopcode_bfmem_right:
+lopcode_bfmem_right:
         if (baf_interpreter_bfmem_pointer + argument < baf_interpreter_bfmem_end_pointer)
             baf_interpreter_bfmem_pointer += argument;
         goto lfinish_interpreter_cycle;
 
-    lopcode_print:
+lopcode_print:
         (void)putchar(*baf_interpreter_bfmem_pointer);
         goto lfinish_interpreter_cycle;
 
-    lopcode_input:
+lopcode_input:
         argument = s_wrapped_cgetc();
         if (KEYBOARD_STOP == argument) {
             puts("?ABORT");
@@ -879,29 +871,29 @@ static void baf_interpret(BAFInterpreter *const interpreter) {
         *baf_interpreter_bfmem_pointer = argument;
         goto lfinish_interpreter_cycle;
 
-    lopcode_jeq:
+lopcode_jeq:
         if (0 == *baf_interpreter_bfmem_pointer) {
             baf_interpreter_program_pointer =
                 *(baf_opcode_t**)(baf_interpreter_program_pointer + 1);
         }
         goto lfinish_interpreter_cycle;
 
-    lopcode_jne:
+lopcode_jne:
         if (0 != *baf_interpreter_bfmem_pointer) {
             baf_interpreter_program_pointer =
                 *(baf_opcode_t**)(baf_interpreter_program_pointer + 1);
         }
         goto lfinish_interpreter_cycle;
 
-    lopcode_cmem_read:
+lopcode_cmem_read:
         *baf_interpreter_bfmem_pointer = *baf_interpreter_cmem_pointer;
         goto lfinish_interpreter_cycle;
 
-    lopcode_cmem_write:
+lopcode_cmem_write:
         *baf_interpreter_cmem_pointer = *baf_interpreter_bfmem_pointer;
         goto lfinish_interpreter_cycle;
 
-    lopcode_cmem_left:
+lopcode_cmem_left:
         if ((uint16_t)baf_interpreter_cmem_pointer > argument) {
             baf_interpreter_cmem_pointer -= argument;
         } else {
@@ -909,7 +901,7 @@ static void baf_interpret(BAFInterpreter *const interpreter) {
         }
         goto lfinish_interpreter_cycle;
 
-    lopcode_cmem_right:
+lopcode_cmem_right:
         if (UINT16_MAX - (uint16_t)baf_interpreter_cmem_pointer > argument) {
             baf_interpreter_cmem_pointer += argument;
         } else {
@@ -917,7 +909,7 @@ static void baf_interpret(BAFInterpreter *const interpreter) {
         }
         goto lfinish_interpreter_cycle;
 
-    lopcode_execute:
+lopcode_execute:
         baf_interpreter_register_a = *baf_interpreter_bfmem_pointer;
         baf_interpreter_register_x = baf_interpreter_bfmem_pointer[1];
         baf_interpreter_register_y = baf_interpreter_bfmem_pointer[2];
@@ -928,11 +920,10 @@ static void baf_interpret(BAFInterpreter *const interpreter) {
         goto lfinish_interpreter_cycle;
 
 
-    lfinish_interpreter_cycle:
+lfinish_interpreter_cycle:
         // Jumped to after an opcode has been executed.
         baf_interpreter_program_pointer += baf_opcode_size_table[opcode];
     }
-
 
     // Writes back mutable interpreter state.
     interpreter->basicfuck_cell_pointer       = baf_interpreter_bfmem_pointer;
@@ -947,50 +938,59 @@ static void baf_interpret(BAFInterpreter *const interpreter) {
 
 static void help_menu() {
     clrscr();
-    (void)puts("REPL Commands (must be at start of line):\n"
-               "\n"
-               "! - Exits REPL.\n"
-               "? - Displays this help menu.\n"
-               "# - Displays bytecode of last program.\n"
-               "\n"
-               "REPL Controls (Keypress):\n"
-               "\n"
-               KEYBOARD_STOP_STRING " - Cancel input and start new line like C-c.\n"
-               KEYBOARD_HOME_STRING " - Move to start of line.\n"
-               KEYBOARD_CLEAR_STRING " - Clear screen and line.\n"
-               KEYBOARD_F1_STRING " - Previous history item.\n"
-               KEYBOARD_F2_STRING " - Next history item.\n"
-               "\n"
-               KEYBOARD_STOP_STRING " - Abort BASICfuck program.\n"
-               "\n"
-               "Press ANY KEY to CONTINUE");
+    (void)puts(
+        "REPL Commands (must be at start of line):\n"
+        "\n"
+        "! - Exits REPL.\n"
+        "? - Displays this help menu.\n"
+        "# - Displays bytecode of last program.\n"
+        "\n"
+        "REPL Controls (Keypress):\n"
+        "\n"
+        KEYBOARD_STOP_STRING " - Cancel input and start new line like C-c.\n"
+        KEYBOARD_HOME_STRING " - Move to start of line.\n"
+        KEYBOARD_CLEAR_STRING " - Clear screen and line.\n"
+        KEYBOARD_F1_STRING " - Previous history item.\n"
+        KEYBOARD_F2_STRING " - Next history item.\n"
+        "\n"
+        KEYBOARD_STOP_STRING " - Abort BASICfuck program.\n"
+        "\n"
+        "Press ANY KEY to CONTINUE"
+    );
     (void)s_wrapped_cgetc();
 
     clrscr();
-    (void)puts("BASICfuck Instructions (Part 1):\n"
-               "\n"
-               "+ - Increment cell.\n"
-               "- - Decrement cell.\n"
-               "> - Move to next cell.\n"
-               "< - Move to previous cell.\n"
-               ". - Display value in cell as character.\n"
-               ", - Store value of key from keyboard in cell.\n"
-               "[ - Jump to corresponding ']' if value of cell is 0.\n"
-               "] - Jump to corresponding '[' if value of cell is not 0.\n"
-               "\n"
-               "Press ANY KEY to CONTINUE");
+    (void)puts(
+        "BASICfuck Instructions (Part 1):\n"
+        "\n"
+        "+ - Increment cell.\n"
+        "- - Decrement cell.\n"
+        "> - Move to next cell.\n"
+        "< - Move to previous cell.\n"
+        ". - Display value in cell as character.\n"
+        ", - Store value of key from keyboard in cell.\n"
+        "[ - Jump to corresponding ']' if value of cell is 0.\n"
+        "] - Jump to corresponding '[' if value of cell is not 0.\n"
+        "\n"
+        "Press ANY KEY to CONTINUE"
+    );
     (void)s_wrapped_cgetc();
 
     clrscr();
-    (void)puts("BASICfuck Instructions (Part 2):\n"
-               "\n"
-               ") - Move to next location in computer memory.\n"
-               "( - Move to previous location in computer memory.\n"
-               "@ - Read value from computer memory into cell.\n"
-               "* - Write value from cell into computer memory\n"
-               "% - Execute location in computer memory as subroutine. The values of the current and next two cells will be used for the A, X, and Y registers. Resulting register values will be stored back into the respective cells.\n"
-               "\n"
-               "Press ANY KEY to CONTINUE");
+    (void)puts(
+        "BASICfuck Instructions (Part 2):\n"
+        "\n"
+        ") - Move to next location in computer memory.\n"
+        "( - Move to previous location in computer memory.\n"
+        "@ - Read value from computer memory into cell.\n"
+        "* - Write value from cell into computer memory\n"
+        "% - Execute location in computer memory as subroutine. The values of "
+        "the current and next two cells will be used for the A, X, and Y "
+        "registers. Resulting register values will be stored back into the "
+        "respective cells.\n"
+        "\n"
+        "Press ANY KEY to CONTINUE"
+    );
     (void)s_wrapped_cgetc();
 
     clrscr();
@@ -1103,8 +1103,10 @@ int main(void) {
         case BAF_COMPILE_UNTERMINATED_LOOP:
             (void)puts("?UNTERMINATED LOOP");
             continue;
-        case BAF_COMPILE_SUCCESS: break;
-        default: assert(0 && "Unreachable");
+        case BAF_COMPILE_SUCCESS:
+            break;
+        default:
+            assert(0 && "unreachable");
         }
 
         baf_interpret(&interpreter);
@@ -1112,16 +1114,17 @@ int main(void) {
         // Print.
         s_utoa_fputs(3, *interpreter.basicfuck_cell_pointer, 10);
         (void)fputs(" (Cell ", stdout);
-        s_utoa_fputs( 5
-                    , (uint16_t)(interpreter.basicfuck_cell_pointer
-                                 - interpreter.basicfuck_cell_start_pointer)
-                    , 10);
+        s_utoa_fputs(
+            5,
+            (uint16_t)(interpreter.basicfuck_cell_pointer
+                       - interpreter.basicfuck_cell_start_pointer)
+            , 10
+        );
         (void)fputs(", Memory $", stdout);
         s_utoa_fputs(4, (uint16_t)interpreter.computer_memory_pointer, 16);
         (void)puts(")");
     }
- lexit_repl:
-
+lexit_repl:
 
     return 0;
 }

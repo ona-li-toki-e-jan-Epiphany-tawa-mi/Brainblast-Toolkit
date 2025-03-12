@@ -1,6 +1,6 @@
 # This file is part of Brainblast-Toolkit.
 #
-# Copyright (c) 2024 ona-li-toki-e-jan-Epiphany-tawa-mi
+# Copyright (c) 2024-2025 ona-li-toki-e-jan-Epiphany-tawa-mi
 #
 # Brainblast-Toolkit is free software: you can redistribute it and/or modify it
 # under the terms of the GNU General Public License as published by the Free
@@ -37,6 +37,7 @@
             targetPkgs = pkgs:
               with pkgs; [
                 cc65
+                astyle
 
                 vice
                 x16-emulator

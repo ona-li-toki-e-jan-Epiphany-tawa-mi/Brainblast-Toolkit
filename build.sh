@@ -131,6 +131,13 @@ if [ build = "$1" ]; then
     CFLAGS=${CFLAGS:-'-Osir -Cl -Wc -W,error,-W,struct-param'}
     EXTRA_CFLAGS=${EXTRA_CFLAGS:-}
 
+    # Automatically format if astyle is installed.
+    set -x
+    if type astyle > /dev/null 2>&1; then
+        astyle -n --style=attach "$repl_source" || exit 1
+    fi
+    set +x
+
     for target in $build_targets; do
         echo "INFO: Building for target '$target'..."
 
