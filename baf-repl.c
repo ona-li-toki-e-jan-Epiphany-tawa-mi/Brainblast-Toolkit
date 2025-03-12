@@ -50,7 +50,7 @@ static uint8_t height = 0;
 // immediately. This version adds in a check to ensure the blocking behavior.
 // TODO: add preprocessor stuff to remove extra code when on machine with the
 // blocking behavior.
-static uint8_t wrappedCgetc() {
+static uint8_t wrappedCgetc(void) {
     uint8_t character = 0;
     do {
         character = cgetc();
@@ -125,7 +125,7 @@ static uint8_t wrappedCgetc() {
 // To set a blinking cursor (easily,) you need to use the cursor() function from
 // conio.h, but it seems to error with "Illegal function call" or something when
 // used in a complex function, so I have it pulled out into this separate one.
-static uint8_t blinkingCgetc() {
+static uint8_t blinkingCgetc(void) {
     uint8_t character = 0;
 
     cursor(true);
@@ -158,7 +158,7 @@ static uint16_t history_stack_index               = 0;
 // Increments the history stack index and loops it around if it goes out of
 // bounds.
 // history_stack_index (global) - current index into the history stack.
-static void incrementHistoryStackIndex() {
+static void incrementHistoryStackIndex(void) {
     ++history_stack_index;
     if (history_stack_index >= HISTORY_STACK_SIZE)
         history_stack_index = 0;
@@ -166,7 +166,7 @@ static void incrementHistoryStackIndex() {
 
 // Decrements the history stack index and loops it around if it goes out of
 // bounds.
-static void decrementHistoryStackIndex() {
+static void decrementHistoryStackIndex(void) {
     if (0 == history_stack_index) {
         history_stack_index = HISTORY_STACK_SIZE - 1;
     } else {
@@ -184,7 +184,7 @@ static uint8_t edit_buffer_cursor = 0;
 static uint8_t edit_buffer_input_size = 0;
 
 // Saves the edit buffer to the history stack for later recollection.
-static void saveEditBuffer() {
+static void saveEditBuffer(void) {
     uint8_t character    = 0;
     uint8_t buffer_index = 0;
 
@@ -263,7 +263,7 @@ static void recallEditBuffer(const bool forward_recall) {
 // null-terminator.
 // The cursor on the screen will be moved to the line after the filled portion
 // of the text buffer once done.
-static void editEditBuffer() {
+static void editEditBuffer(void) {
     uint8_t new_cursor = 0;
     uint8_t key        = 0;
 
@@ -512,7 +512,7 @@ static const uint8_t baf_opcode_size_table[] = {
 static baf_opcode_t baf_instruction_opcode_table[256];
 
 // A one-time-call function used to initialize instruction_opcode_table[].
-static void baf_initialize_instruction_opcode_table() {
+static void baf_initialize_instruction_opcode_table(void) {
     uint8_t i = 0;
     for (; i < 255; i++)
         baf_instruction_opcode_table[i] = 0xFF;
@@ -546,7 +546,7 @@ static baf_opcode_t*  baf_compiler_write_end_pointer = NULL; // Pointer to one a
 // Gets clobbered.
 // baf_compiler_write_end_pointer (global).
 // true if succeeded, false if ran out of memory.
-static bool baf_compile_first_pass() {
+static bool baf_compile_first_pass(void) {
     uint8_t      instruction = 0;
     baf_opcode_t opcode      = 0;
 
@@ -652,7 +652,7 @@ lcompile_counted_instruction:
 // baf_compiler_write_pointer (global) - set to the start of the write buffer.
 // Gets clobbered.
 // Returns true if succeeded, false if there is an unterminated loop.
-static bool baf_compile_second_pass() {
+static bool baf_compile_second_pass(void) {
     baf_opcode_t* write_start_pointer = baf_compiler_write_pointer;
     baf_opcode_t  opcode = 0;
     uint16_t      loop_depth = 0;
@@ -746,28 +746,28 @@ static uint8_t baf_interpreter_register_y = 0;
 // baf_interpreter_register_y (global) - the value to place in the Y register.
 // baf_interpreter_cmem_pointer (global) - the address to execute as a
 // subroutine.
-static void baf_execute() {
+static void baf_execute(void) {
     // Overwrites address of subroutine to call in next assembly block with the
     // computer memory pointer's value.
-    __asm__ volatile ("lda     %v",   baf_interpreter_cmem_pointer);
-    __asm__ volatile ("sta     %g+1", ljump_instruction);
-    __asm__ volatile ("lda     %v+1", baf_interpreter_cmem_pointer);
-    __asm__ volatile ("sta     %g+2", ljump_instruction);
+    __asm__ volatile ("lda %v",   baf_interpreter_cmem_pointer);
+    __asm__ volatile ("sta %g+1", ljump_instruction);
+    __asm__ volatile ("lda %v+1", baf_interpreter_cmem_pointer);
+    __asm__ volatile ("sta %g+2", ljump_instruction);
     // Executes subroutine.
-    __asm__ volatile ("lda     %v",   baf_interpreter_register_a);
-    __asm__ volatile ("ldx     %v",   baf_interpreter_register_x);
-    __asm__ volatile ("ldy     %v",   baf_interpreter_register_y);
+    __asm__ volatile ("lda %v",   baf_interpreter_register_a);
+    __asm__ volatile ("ldx %v",   baf_interpreter_register_x);
+    __asm__ volatile ("ldy %v",   baf_interpreter_register_y);
 ljump_instruction:
-    __asm__ volatile ("jsr     %w",   NULL);
+    __asm__ volatile ("jsr %w",   NULL);
     // Retrieves resuting values.
-    __asm__ volatile ("sta     %v",   baf_interpreter_register_a);
-    __asm__ volatile ("stx     %v",   baf_interpreter_register_x);
-    __asm__ volatile ("sty     %v",   baf_interpreter_register_y);
+    __asm__ volatile ("sta %v",   baf_interpreter_register_a);
+    __asm__ volatile ("stx %v",   baf_interpreter_register_x);
+    __asm__ volatile ("sty %v",   baf_interpreter_register_y);
 
     return;
     // If we don't include a jmp instruction, cc65, annoyingly, strips the label
     // from the resulting assembly.
-    __asm__ volatile ("jmp     %g", ljump_instruction);
+    __asm__ volatile ("jmp %g", ljump_instruction);
 }
 
 // Runs the interpreter with the given bytecode-compiled BASICfuck program,
@@ -915,7 +915,7 @@ lfinish_interpreter_cycle:
 // REPL                                                                       //
 ////////////////////////////////////////////////////////////////////////////////
 
-static void helpMenu() {
+static void helpMenu(void) {
     clrscr();
     puts(
         "REPL Commands (must be at start of line):\n"
@@ -1005,7 +1005,7 @@ static baf_opcode_t program_memory[PROGRAM_MEMORY_SIZE] = {0};
 // Displays a readout of the bytecode of the last program to the user.
 // Holding space will slow down the printing.
 // program_memory (global) - the program buffer.
-static void displayBytecode() {
+static void displayBytecode(void) {
     uint8_t i = 0;
 
     // Ideally display 16 bytes at a time, but screen real estate is what it is.
