@@ -2,7 +2,7 @@
 
 # This file is part of Brainblast-Toolkit.
 #
-# Copyright (c) 2024 ona-li-toki-e-jan-Epiphany-tawa-mi
+# Copyright (c) 2024-2025 ona-li-toki-e-jan-Epiphany-tawa-mi
 #
 # Brainblast-Toolkit is free software: you can redistribute it and/or modify it
 # under the terms of the GNU General Public License as published by the Free
@@ -44,10 +44,10 @@ export ATARIXL_BINARY_FILE_EXTENSION=com
 
 # Emulator commands. The binary to run will be appended to the end of the
 # command.
-export C64_EMULATOR='x64 -silent'
-export C128_EMULATOR='x128 -silent'
-export PLUS4_EMULATOR='xplus4 -silent'
-export PET_EMULATOR='xpet -silent'
+export C64_EMULATOR=x64
+export C128_EMULATOR=x128
+export PLUS4_EMULATOR=xplus4
+export PET_EMULATOR=xpet
 export CX16_EMULATOR='x16emu -rom /usr/share/x16-rom/rom.bin -prg'
-export ATARI_EMULATOR='atari800 > /dev/null -run'
-export ATARIXL_EMULATOR='atari800 -xl > /dev/null -run'
+export ATARI_EMULATOR='atari800 -run'
+export ATARIXL_EMULATOR='atari800 -xl -run'

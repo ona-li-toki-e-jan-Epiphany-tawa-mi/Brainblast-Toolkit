@@ -21,39 +21,43 @@ Dependencies:
 
 There is a `flake.nix` you can use with `nix develop` to get them.
 
-Then, run the following command:
+For help information, run the following command(s):
 
 ```shell
 ./build.sh
 ```
 
-Builds for the Commodore 64. Specify the TARGETS environment variable to build
-for a paticular system (see `build.sh` for available targets,) or run the
-following command to build for all targets:
+To get a list of available targets, run the following command(s):
 
 ```shell
-./build-all.sh
+./build.sh targets
+```
+
+To build for a paticular target, run the following command(s):
+
+```shell
+./build.sh build <target>
+```
+
+To simply build for all targets, run the following command(s):
+
+```shell
+./build.sh build all
 ```
 
 Resulting binaries can be found in `out/` in the directory with the name of the
 build target.
 
-There are build configuration options you can change in `config.sh`, mainly for
-memory allocation.
-
 ## How to Run
 
-Check `build.sh` for the required emulation software. There is a `flake.nix` you
-can use with `nix develop path:.` to get them.
+Check `config.sh` for the required emulation software. There is a `flake.nix`
+you can use with `nix develop path:.` to get them.
 
-Then, run the following command:
+To emulate a paticular target, run the following command(s):
 
 ```shell
-./build.sh run
+./build.sh run <target>
 ```
-
-Emulates on the Commodore 64. Specify the TARGETS environment variable to
-emulate a paticular system (see `build.sh` for available targets.)
 
 ## BASICfuck
 

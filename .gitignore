@@ -1,12 +1,6 @@
-*.s
+# Build artifacts.
 *.o
-c64/
-c128/
-pet/
-plus4/
-cx16/
-atari/
-atarixl/
+out/
 
-result*
+# Nix.
 flake.lock
