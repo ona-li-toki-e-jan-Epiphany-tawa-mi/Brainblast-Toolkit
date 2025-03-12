@@ -267,6 +267,10 @@ static void editEditBuffer() {
     uint8_t new_cursor = 0;
     uint8_t key        = 0;
 
+    // Reset edit buffer state.
+    edit_buffer_cursor     = 0;
+    edit_buffer_input_size = 0;
+
     while (true) {
         key = blinkingCgetc();
 
@@ -286,18 +290,16 @@ static void editEditBuffer() {
 
         // "Clears" the input buffer and exits from this function.
         case KEYBOARD_STOP: {
-            // Writes null terminator to start of buffer, "clearing" it.
             edit_buffer[0] = NULL;
             putchar('\n');
             goto lquit_editing_buffer;
         }
 
-        // Clears the screen and input buffer.
+        // Clears the screen and input buffer and exits from this function.
         case KEYBOARD_CLEAR: {
-            edit_buffer_cursor     = 0;
-            edit_buffer_input_size = 0;
+            edit_buffer[0] = NULL;
             clrscr();
-            break;
+            goto lquit_editing_buffer;
         }
 
         // Deletes characters from the buffer.
