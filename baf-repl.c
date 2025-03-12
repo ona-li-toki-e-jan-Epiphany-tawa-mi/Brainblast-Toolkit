@@ -164,8 +164,9 @@ static uint16_t history_stack_index               = 0;
 // history_stack_index (global) - current index into the history stack.
 static void incrementHistoryStackIndex(void) {
     ++history_stack_index;
-    if (history_stack_index >= HISTORY_STACK_SIZE)
+    if (history_stack_index >= HISTORY_STACK_SIZE) {
         history_stack_index = 0;
+    }
 }
 
 // Decrements the history stack index and loops it around if it goes out of
@@ -192,8 +193,9 @@ static void saveEditBuffer(void) {
     uint8_t character    = 0;
     uint8_t buffer_index = 0;
 
-    if (NULL == edit_buffer[buffer_index])
+    if (NULL == edit_buffer[buffer_index]) {
         return;
+    }
 
     do {
         character                          = edit_buffer[buffer_index];
@@ -496,8 +498,7 @@ static opcode_t instruction_opcode_table[256];
 // TODO: see if array can be intialized at compile time.
 static void initializeInstructionOpcodeTable(void) {
     uint8_t i = 0;
-    for (; i < 255; i++)
-        instruction_opcode_table[i] = 0xFF;
+    for (; i < 255; ++i) instruction_opcode_table[i] = 0xFF;
     instruction_opcode_table[255] = 0xFF;
 
     instruction_opcode_table[NULL] = OPCODE_HALT;
@@ -616,8 +617,9 @@ lcompile_counted_instruction: {
             while (true) {
                 other_instruction = *compiler_read_pointer;
 
-                if (other_instruction != instruction)
+                if (other_instruction != instruction) {
                     break;
+                }
 
                 ++instruction_count;
                 ++compiler_read_pointer;
@@ -818,8 +820,9 @@ lopcode_bfmem_left: {
         }
 
 lopcode_bfmem_right: {
-            if (interpreter_bfmem_pointer + argument < basicfuck_memory_end)
+            if (interpreter_bfmem_pointer + argument < basicfuck_memory_end) {
                 interpreter_bfmem_pointer += argument;
+            }
             goto lfinish_interpreter_cycle;
         }
 
