@@ -79,12 +79,12 @@ static uint8_t wrappedCgetc() {
 // Not defined in cbm.h, but the same for all CBM computers.
 #  define KEYBOARD_CLEAR        0x93
 #  define KEYBOARD_CLEAR_STRING "CLR"
-#  if defined( __C16__) || defined( __C64__) || defined(__C128__) || defined(__VIC20__) || defined(__CBM510__) || defined(__CBM610__) || defined(__CX16__)
+#  if defined( __C16__) || defined( __C64__) || defined(__C128__) || defined(__CX16__)
 #    define KEYBOARD_F1        CH_F1
 #    define KEYBOARD_F1_STRING "F1"
 #    define KEYBOARD_F2        CH_F2
 #    define KEYBOARD_F2_STRING "F2"
-#  elif defined(__PET__) // __C16__ || __C64__ || __C128__ || __VIC20__ || __CBM510__ || __CBM610__ || __CX16__
+#  elif defined(__PET__) // __C16__ || __C64__ || __C128__ || __CX16__
 #    define KEYBOARD_F1        0x5F
 #    define KEYBOARD_F1_STRING "\x5F (left arrow character)"
 #    define KEYBOARD_F2        0x5E
