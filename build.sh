@@ -126,9 +126,11 @@ if [ build = "$1" ]; then
         build_targets=$2
     fi
 
+    # Remaining arguments are to be passed to cl65.
+    shift 2
+
     CC=cl65
     CFLAGS=${CFLAGS:-'-Osir -Cl -Wc -W,struct-param'}
-    EXTRA_CFLAGS=${EXTRA_CFLAGS:-}
 
     # Automatically format if astyle is installed.
     set -x
@@ -142,14 +144,14 @@ if [ build = "$1" ]; then
 
         load_config_for_target "$target"
         # shellcheck disable=SC2089 # We want \" treated literally.
-        ALL_CFLAGS="$CFLAGS $EXTRA_CFLAGS -t $target -D BASICFUCK_MEMORY_SIZE=${basicfuck_memory_size}U -D HISTORY_STACK_SIZE=${HISTORY_STACK_SIZE}U"
+        ALL_CFLAGS="$CFLAGS -t $target -D BASICFUCK_MEMORY_SIZE=${basicfuck_memory_size}U -D HISTORY_STACK_SIZE=${HISTORY_STACK_SIZE}U"
         out_directory=out/$target
         repl_out="$out_directory/${repl_source%.c}.${binary_file_extension}"
 
         set -x
         mkdir -p "$out_directory"
         # shellcheck disable=SC2086,SC2090 # We want word splitting.
-        $CC $ALL_CFLAGS -o "$repl_out" "$repl_source" || exit 1
+        $CC $ALL_CFLAGS "$@" -o "$repl_out" "$repl_source" || exit 1
         set +x
     done
 
