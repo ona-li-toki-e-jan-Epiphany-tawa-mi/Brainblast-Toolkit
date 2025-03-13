@@ -73,6 +73,17 @@ To simply build for all targets, run the following command(s):
 Resulting binaries can be found in `out/` in the directory with the name of the
 build target.
 
+To enable optimizations, you can append on or more of the following arguments to
+the build command:
+
+- `-DNDEBUG` - disable safety checks. Performance > safety.
+
+I.e:
+
+```shell
+./build.sh build all -DNDEBUG
+```
+
 ### How to Run
 
 Check `config.sh` for the required emulation software. There is a `flake.nix`
