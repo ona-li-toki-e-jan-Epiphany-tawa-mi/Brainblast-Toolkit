@@ -48,25 +48,25 @@ There is a `flake.nix` you can use with `nix develop` to get them.
 
 For help information, run the following command(s):
 
-```shell
+```sh
 ./build.sh
 ```
 
 To get a list of available targets, run the following command(s):
 
-```shell
+```sh
 ./build.sh targets
 ```
 
 To build for a paticular target, run the following command(s):
 
-```shell
+```sh
 ./build.sh build <target>
 ```
 
 To simply build for all targets, run the following command(s):
 
-```shell
+```sh
 ./build.sh build all
 ```
 
@@ -80,7 +80,7 @@ the build command:
 
 I.e:
 
-```shell
+```sh
 ./build.sh build all -DNDEBUG
 ```
 
@@ -91,7 +91,7 @@ you can use with `nix develop path:.` to get them.
 
 To emulate a paticular target, run the following command(s):
 
-```shell
+```sh
 ./build.sh run <target>
 ```
 
@@ -119,53 +119,85 @@ ENTER/RETURN:
 - `?` - displays the help menu.
 - `#` - outputs hexdump of the bytecode of the previous BASICfuck program. Holding SPACE will slow down the printing.
 
-## Example programs
+## Example Programs
 
-TODO: these examples are kinda borked and need to be improved.
+Examples presume the example is the first program being run since loading and
+starting the REPL. Reload it from disk if this is not the case to ensure good
+results.
 
-#### Cycling screen border colors
+### cat / Screen Editor
 
-On the Commodore 64, the color of the border of the screen is stored at $D020. This code uses that, so it might not work on other machines.
-
-```brainfuck
--[->++++++++++[-)))))))))))))))))))))]<]--[--((]+++[-(((((](    Moves the memory pointer to $D020 the location of the border's color
-+[>*+<]                                                         Rapidly switches border color
-```
-
-#### Cat program / screen editor
+*Works on all targets.*
 
 ```brainfuck
 +[,.]
 ```
 
-#### Reverse cat
+### Cycling Screen Border Colors
+
+*Works on c64 and c128.*
 
 ```brainfuck
-+[,.[->+>+<<]>>[-<<+>>]<-------------]<<[.[-]<]
+Moves the memory pointer to $D020 the location of the border's color
+-[->++++++++++[-)))))))))))))))))))))]<]--[--((]+++[-(((((](
+Rapidly switches border color
++[>*+<]
 ```
 
-Type what you want to be reversed, and then press enter. Your input will be
-displayed as you type it. You'll have to type a little slowly.
-
-#### "Random" maze thing
-
-Note: this requires a machine that uses PETSCII.
-
-cc65 has programs on PETSCII machines use the shifted character set by default
-to be more standard. You will have to switch it to the non-shifted set for this
-program. On the Commodore 64, and probably on other Commodore machines, you can
-do this by pressing SHIFT+Commodore key.
-
-Clone of `10 PRINT CHR$ (205.5 + RND (1)); : GOTO 10`.
+*Works on plus4.*
 
 ```brainfuck
-->+++++[-<---------->]<     Initializes the current cell to 205 the code for the backslash
-[>@)[<+>>]<<.>[<->>]<<<]    Prints out maze Prints a backslash if the selected memory cell is 0 or a forward slash if it is not
+Moves the memory pointer to $FF19 the location of the border's color
+-[->++++++++++++++++[-))))))))))))))))]<]+++++[-)))))]
+Rapidly switches border color
++[>*+<]
 ```
+
+### Reverse cat
+
+*Works on all targets.*
+
+```brainfuck
+Sets the first cell to a user selected EOF character
+,>
+Pain
++[,.[->>+>+<<<]<[->+>+<<]>>>>[-<<->>]<[-<<<+>>>]<]<<<[.[-]<]
+```
+
+Run the first line and press the key you want to act as the end of input (you
+will probably want ENTER/RETURN.)
+
+Then, run the second line and type what you want to be reversed, and then press
+the end of input key. Your input will be displayed as you type it. You'll have
+to type a little slowly.
+
+### Maze
+
+Port of `10 PRINT CHR$(205.5+RND(1)); : GOTO 10`.
 
 This program relies on reading the values stored in the computers's memory to
-generate "random" numbers. If the selected value in memory is 0, a backslash is
-printed; if it is not 0, then a forward slash will be printed.
+generate "random" numbers. The data is random enough *some* of the time. You
+will find large areas with only one type of slash.
 
-The data is random enough *some* of the time. You will find large areas with
-only one type of slash.
+*Works on c64, c128, plus4, and cx16.*
+
+```brainfuck
+Initializes the current cell to 205 backslash
+->+++++[-<---------->]<
+Prints backslash if read memory  is 0 else adds 1 for forward slash
+[>@)[<+>>]<<.>[<->>]<<<]
+```
+
+cc65 has programs on PETSCII machines use the shifted character set on
+startup. You will have to switch it to the non-shifted set for this program. On
+the Commodore 64, and probably on other Commodore machines, you can do this by
+pressing SHIFT+Commodore key.
+
+*Works on pet, atari, and atarixl.*
+
+```brainfuck
+Intializes the first two cells to 92 backslash and 47 foward slash
+-------->>++++[-<+++++[-<+++++>]>]++++++[-<++++++++>]<->
+Prints first cell if read memory is zero else the second
++[@)[[-]>]<<.[>]+]
+```
